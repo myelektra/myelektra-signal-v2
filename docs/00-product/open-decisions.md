@@ -195,7 +195,7 @@ approved by default, and none may be implemented before approval.**
 | OD-PR-2 | Whether and how existing subscriptions are repriced on a catalog change. | [pricing.md](../05-billing/pricing.md) | `D` |
 | OD-PR-3 | Whether a free trial exists. Not in the brief; assumed absent (same subject as OD-UI-2). | [pricing.md](../05-billing/pricing.md) | `D` |
 | ~~OD-FN-1~~ | **RESOLVED by spike.** Strategy A — Deno import map to shared TypeScript source. Verified: `deno check` exit 0 and a runtime response from the shared domain function. Variant B fails with `TS2307`; variant C typechecks but diverges silently and is rejected. | [foundation-plan.md](../01-architecture/foundation-plan.md) | `S1` |
-| OD-FN-2 | ESLint flat config versus legacy config, and which import-boundary plugin. | [foundation-plan.md](../01-architecture/foundation-plan.md) | `D` |
+| ~~OD-FN-2~~ | **RESOLVED by implementation.** ESLint 9 flat config in `eslint.config.js`, no plugin: core `no-restricted-imports`, `no-restricted-syntax`, and `no-restricted-globals`. No plugin was needed, and none would have sufficed — `no-restricted-imports` matches `patterns` with gitignore semantics, where a negation cannot separate a relative import from a bare specifier, so a deny-by-default allow list is inexpressible there and lives in `scripts/check-boundaries.py` instead. | [foundation-plan.md](../01-architecture/foundation-plan.md) | `S1` |
 | OD-FN-3 | Whether preview deployments share one staging project or use per-PR branching (same subject as OD-DP-1, OD-MG-2). | [foundation-plan.md](../01-architecture/foundation-plan.md) | `D` |
 
 ## Appendix — document-local open decisions

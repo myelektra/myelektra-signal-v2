@@ -235,14 +235,21 @@ bun run build
 | Lint | ESLint + import-boundary rule | Style, and any layer violation from R-FN-2 |
 | Unit tests | `bun test` on `packages/domain` | Any failure |
 | Build | `bun run build` | Any build error |
-| Doc integrity | `scripts/check-docs` | Missing sections, broken links, stale naming |
-| Currency scan | `scripts/check-currency` | R-FN-8 |
-| Exclusion scan | `scripts/check-exclusions` | R-FN-8 |
-| Bundle scan | Secret scanner on `apps/web/dist` | Any secret pattern in build output |
+| Doc integrity | `scripts/check-docs.py` | Missing sections, broken links, stale naming, RLS column granularity |
+| Currency and exclusion scan | `scripts/check-usd-only.py` | R-FN-8 |
+| Boundary scan | `scripts/check-boundaries.py` | Any violation of R-FN-2 |
+| Credential scan | Inline CI step over `apps/web/dist` **and** source | Any server-only credential in build output |
 
-**Existing gap to close.** The documentation checker currently lives at `/home/user/check_docs.py`,
-outside the repository. It verified the Phase 0 baseline but is not versioned and not runnable by
-another contributor. Phase 1B ports it into `scripts/` so the gates are reproducible.
+**Gap closed in Phase 1B.** The documentation checker lived outside the repository: it verified the
+Phase 0 baseline but was not versioned and not runnable by another contributor. It is now
+`scripts/check-docs.py`, so the gates are reproducible from a clean checkout.
+
+**One typecheck project, not four.** `tsc -b --noEmit` propagates `--noEmit` into every referenced
+project, and a composite referenced project may not disable emit (`TS6310`). Verified on TypeScript
+5.9.3 and 6.0.3. The gate command and TS project references are therefore mutually exclusive, and the
+gate command wins. Per-package isolation is enforced instead by module resolution (bun links only
+declared dependencies, so `@myelektra/domain` is unresolvable from `apps/web`), by ESLint's
+`no-restricted-globals` for browser versus server globals, and by `scripts/check-boundaries.py`.
 
 Integration, RLS, and end-to-end tests are **deferred** — they require a database
 ([test-strategy R-TS-2](../10-testing/test-strategy.md#r-ts-2-test-layers-d)) and the harness choice
@@ -250,7 +257,8 @@ is still open (OD-TS-1, OD-TS-2).
 
 ### R-FN-7 CI workflow plan `D`
 
-GitHub Actions, one workflow, triggered on every pull request and on pushes to `main`.
+GitHub Actions, one workflow — `.github/workflows/quality.yml` — triggered on every pull request and
+on pushes to `main`. Eighteen steps.
 
 ```
 job: verify
@@ -258,14 +266,14 @@ job: verify
   2. bun install --frozen-lockfile
   3. bun tsc -b --noEmit          ── typecheck + boundary
   3b. deno check --config supabase/deno.json supabase/functions/**/index.ts
-  3c. deno lint supabase/functions && deno fmt --check supabase
+  3c. deno lint supabase/functions && deno fmt --check supabase/deno.json supabase/functions
   4. bun run lint                 ── style + boundary
-  5. bun test                     ── domain unit tests
+  5. bun test                     ── package unit tests
   6. bun run build                ── produces dist
-  7. scripts/check-docs           ── documentation integrity
-  8. scripts/check-currency       ── USD-only
-  9. scripts/check-exclusions     ── the providers in R-LC-1 + the currency ids in R-LC-5
- 10. secret scan on dist + tree   ── build artifacts, not only source
+  7. scripts/check-docs.py        ── documentation integrity
+  8. scripts/check-usd-only.py    ── the providers in R-LC-1 + the currency ids in R-LC-5
+  9. scripts/check-boundaries.py  ── the import and environment boundary of R-FN-2
+ 10. credential scan on dist + source ── build artifacts, not only source
 
 job: preview (main only, after verify)
  11. Vercel preview deployment
@@ -289,9 +297,10 @@ executable scripts.
 
 | Script | Checks |
 | --- | --- |
-| `scripts/check-currency` | None of the currency identifiers in [R-LC-5](../00-product/legacy-exclusion-list.md#r-lc-5-excluded-currency-handling-s1) appears outside exclusion documentation, and none is defined as a schema field; every monetary column is named `*_usd`, is paired with `check (currency = 'USD')`, uses no floating-point type, and carries a non-negative amount check |
-| `scripts/check-exclusions` | None of the excluded providers in [R-LC-1](../00-product/legacy-exclusion-list.md#r-lc-1-prohibited-technologies-s1) appears in source or in the dependency tree outside exclusion documentation |
-| `scripts/check-docs` | Mandated files present, 8 sections per doc, links and anchors resolve, skill anchors resolve, no stale `*_cents` naming, no RLS policy described with column granularity |
+| `scripts/check-usd-only.py` | None of the currency identifiers in [R-LC-5](../00-product/legacy-exclusion-list.md#r-lc-5-excluded-currency-handling-s1) appears outside exclusion documentation, and none is defined as a schema field; every monetary column is named `*_usd`, is paired with `check (currency = 'USD')`, uses no floating-point type, and carries a non-negative amount check |
+| `scripts/check-usd-only.py` *(continued)* | None of the excluded providers in [R-LC-1](../00-product/legacy-exclusion-list.md#r-lc-1-prohibited-technologies-s1) appears in source, configuration, or the dependency tree outside exclusion documentation; no stale `*_cents` name survives; `.env` is not committed |
+| `scripts/check-docs.py` | Mandated files present, 8 sections per doc, links and anchors resolve, skill anchors resolve, no RLS policy described with column granularity |
+| `scripts/check-boundaries.py` | The import boundary of R-FN-2, including `await import(...)` and `require(...)`; the Deno import map points at shared source; no `_shared` copy exists; the browser environment inventory matches `.env.example` |
 
 The identifiers themselves are deliberately **not** restated here. They have one canonical home —
 [legacy-exclusion-list](../00-product/legacy-exclusion-list.md) — and a second copy is a second place
@@ -319,56 +328,67 @@ passing check.
 Phase 1B creates `.env.example`, `.gitignore`, the scanner configuration, and the redaction
 convention. It does **not** provision real secrets, because their consumers do not exist yet.
 
-### R-FN-10 Foundation files to be created (Phase 1B)
+### R-FN-10 Foundation files created (Phase 1B)
 
 Toolchain and structure only. Nothing in this list touches data, auth, or payments.
 
 ```
-package.json                       workspace root, scripts for the five commands
-bun.lockb                          lockfile
+package.json                       workspace root, scripts for the required commands
+bun.lock                           lockfile, committed
 tsconfig.base.json                 shared compiler options
-tsconfig.json                      project references
+tsconfig.json                      one solution project (see R-FN-6)
 .gitignore                         .env, dist, node_modules
 .env.example                       every key, every value empty
-README.md                          updated: layout, commands, boundaries
-AGENTS.md                          contributor rules, incl. the prohibition list
+.prettierrc.json                   formatting
+.prettierignore                    keeps Prettier off the Deno-formatted tree
+eslint.config.js                   flat config: boundary, runtime separation, credential naming
+README.md                          updated: layout, commands, boundary
 
 apps/web/package.json
 apps/web/vite.config.ts
-apps/web/tsconfig.json
 apps/web/index.html
 apps/web/src/main.tsx              mount point only
-apps/web/src/App.tsx               placeholder shell — no screens
+apps/web/src/App.tsx               accessible placeholder shell — no screens
+apps/web/src/index.css             skip link, focus indicator, AA contrast
+apps/web/src/vite-env.d.ts         the four browser variables, typed
+apps/web/src/api/env.ts            reads and validates the browser environment
 apps/web/src/api/client.ts         the ONLY module allowed to import @supabase/supabase-js
 apps/web/src/api/index.ts          the API surface the rest of apps/web imports
-apps/web/.eslintrc.cjs             boundary rules incl. the single-module supabase-js exception
+apps/web/src/api/*.test.ts         (none yet)
 
-packages/domain/package.json
-packages/domain/tsconfig.json
-packages/domain/src/index.ts       empty public surface
+packages/domain/{package.json,src/index.ts,src/index.test.ts}
+packages/contracts/{package.json,src/index.ts,src/index.test.ts}
+packages/adapters/{package.json,src/index.ts,src/index.test.ts}
 
-packages/contracts/package.json
-packages/contracts/tsconfig.json
-packages/contracts/src/index.ts    empty public surface
-
-packages/adapters/package.json
-packages/adapters/tsconfig.json
-packages/adapters/src/index.ts     empty public surface
-
-supabase/config.toml               project config; no migrations
 supabase/deno.json                 the R-FN-12 import map (validated by the spike)
-supabase/functions/spike/index.ts  the R-FN-12 validation function; dependency-free, no product logic
+supabase/functions/spike/index.ts  the R-FN-12 validation function; no product logic
 
-scripts/check-docs.ts              ported from the Phase 0 checker
-scripts/check-currency.ts
-scripts/check-exclusions.ts
-scripts/secret-scan.sh
+scripts/check-docs.py              ported from the Phase 0 checker
+scripts/check-usd-only.py          currency identifiers + excluded providers + schema money shape
+scripts/check-boundaries.py        the R-FN-2 boundary, the import map, the env inventory
 
-.github/workflows/ci.yml           the R-FN-7 workflow
+.github/workflows/quality.yml      the R-FN-7 workflow
 ```
 
-Every `src/index.ts` is deliberately empty. Phase 1 proves the boundary and the toolchain work; it
-does not pre-build domain surfaces whose shapes depend on blocked decisions.
+**Deviations from the plan as first written, and why:**
+
+| Planned | Built | Reason |
+| --- | --- | --- |
+| `scripts/*.ts` | `scripts/*.py` | The Phase 0 checker was already Python; porting it preserved a verified implementation instead of rewriting one |
+| `check-currency` + `check-exclusions` | one `check-usd-only.py` | Both read the same canonical list from R-LC-1/R-LC-5; two scripts reading one list is two places to drift |
+| `apps/web/.eslintrc.cjs` | `eslint.config.js` | ESLint 9 flat config; `.eslintrc` is deprecated |
+| `.github/workflows/ci.yml` | `.github/workflows/quality.yml` | Named for what it gates |
+| `bun.lockb` | `bun.lock` | Bun 1.4 writes the text lockfile by default; it diffs reviewably |
+| per-package `tsconfig.json` | one root project | `TS6310` — see R-FN-6 |
+| `AGENTS.md`, `supabase/config.toml` | **not created** | Outside the approved Phase 1B file set |
+| `scripts/secret-scan.sh` | inline CI step | Same reason; a dedicated scanner is OD-SE-1 |
+
+**One addition beyond the list:** three `*.test.ts` files. `bun test` is a required gate, and a suite
+with zero tests passes vacuously — the same failure mode R-FN-8 warns about for an empty migrations
+directory. They assert only the placeholder surface.
+
+Every `src/index.ts` holds identity constants and, in `domain`, one pure predicate used by the spike.
+No domain surface whose shape depends on a blocked decision is pre-built.
 
 ### R-FN-11 Explicitly deferred
 
@@ -507,22 +527,41 @@ which clears the R-AS-4 block on Phase 1B.
 
 Phase 1B is complete when:
 
-- [ ] A-12 is approved (**done** — R-FN-15) and the layout in R-FN-1 exists on disk.
-- [ ] The R-FN-13 commands pass in CI: `deno check`, `deno lint`, `deno fmt --check`, `bun tsc -b --noEmit`.
-- [ ] The spike function resolves both shared packages through `supabase/deno.json` and runs.
-- [ ] `@supabase/supabase-js` is imported from `apps/web/src/api/client.ts` and nowhere else — asserted by lint.
-- [ ] A deliberate import of `packages/domain` from `apps/web` fails `tsc` **and** `lint`.
-- [ ] All five commands pass on a clean checkout, locally and in CI.
-- [ ] A deliberate cross-boundary import in `apps/web` fails both `tsc` and `lint`.
-- [ ] `bun install` resolves with no prohibited dependency, including transitive.
-- [ ] `scripts/check-currency`, `scripts/check-exclusions`, and `scripts/check-docs` run in CI and pass.
-- [ ] The schema scans fail closed when `supabase/migrations/` is empty.
-- [ ] The secret scan runs on `apps/web/dist` and finds nothing.
-- [ ] `.env.example` contains every key with an empty value; no real `.env` is committed.
-- [ ] No file from the R-FN-11 deferred list exists.
-- [ ] The Vercel project builds the SPA and serves a placeholder shell.
-- [ ] `pg_net` availability and the Edge Function limits are recorded, resolving OD-JB-4 and OD-BE-2.
-- [ ] No production-readiness claim is made.
+- [x] A-12 is approved (**done** — R-FN-15) and the layout in R-FN-1 exists on disk.
+- [x] The R-FN-13 commands pass: `deno check`, `deno lint`, `deno fmt --check`, `bun tsc -b --noEmit`.
+      Verified locally; the CI run is pending the first pull request.
+- [x] The spike function resolves both shared packages through `supabase/deno.json` and runs —
+      `GET /spike` returned `{"ok":true,"domain":"@myelektra/domain@0.0.0","predicate":true}`.
+- [x] `@supabase/supabase-js` is imported from `apps/web/src/api/client.ts` and nowhere else —
+      asserted by ESLint **and** by `scripts/check-boundaries.py`, both negative-tested.
+- [x] A deliberate import of `packages/domain` from `apps/web` fails `tsc` (`TS2307`) **and** `lint`.
+- [x] All five commands pass on a clean checkout — verified after deleting `node_modules` and
+      `bun.lock`. The CI run is pending.
+- [x] `bun install` resolves with no prohibited dependency, including transitive: the dependency-tree
+      scan reports zero hits for every excluded provider.
+- [x] `scripts/check-docs.py`, `scripts/check-usd-only.py`, and `scripts/check-boundaries.py` run and
+      pass; each is negative-tested (22 injected violations, all caught).
+- [x] The schema scan fails closed: an empty `supabase/migrations/` fails, a violating migration
+      fails on name, type, and non-negative check, and an absent directory reports **NOT RUN** rather
+      than passing.
+- [x] The credential scan runs on `apps/web/dist` and source and finds nothing; it fails on an
+      injected service-role JWT, an `sb_secret_` key, and an assigned server variable, and correctly
+      ignores a public anon key.
+- [x] `.env.example` contains every key with an empty value; no real `.env` is committed. Both are
+      enforced, not just documented.
+- [x] No file from the R-FN-11 deferred list exists. Verified: no `.sql` anywhere, no migrations
+      directory, no `checkout`/`paypal-webhook`/`signal-worker`/`signal-dispatch` function, no route
+      or page directory.
+- [x] No production-readiness claim is made.
+- [ ] **The Vercel project builds the SPA and serves a placeholder shell.** Blocked: no Vercel
+      project exists. The build is verified locally; the deployment is not.
+- [ ] **`pg_net` availability and the Edge Function limits are recorded** (OD-JB-4, OD-BE-2).
+      Blocked: no Supabase project exists, and neither can be answered without one.
+
+The two open items are the only Phase 1B criteria not met, and both are blocked on infrastructure
+this repository cannot create from here. Neither blocks Phase 2 design; both must be resolved before
+Phase 4, because `pg_net` changes the cron invocation mechanism and the wall-clock limit sets the
+Phase 4 batch size.
 
 ## Related skills
 

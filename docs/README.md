@@ -65,7 +65,7 @@ The four registers are distinct and an item lives in exactly one of them:
 | [frontend.md](01-architecture/frontend.md) | SPA responsibilities and limits |
 | [backend.md](01-architecture/backend.md) | Edge Functions, layering, the pure domain core |
 | [deployment.md](01-architecture/deployment.md) | Environments, release order, rollback |
-| [foundation-plan.md](01-architecture/foundation-plan.md) | **Phase 1A** — repository structure, boundary, env inventory, CI, enforcement, create/defer lists |
+| [foundation-plan.md](01-architecture/foundation-plan.md) | **Phase 1B implemented** — repository structure, boundary, env inventory, CI, enforcement, create/defer lists |
 | [legacy-exclusion-list.md](00-product/legacy-exclusion-list.md) | Exclusions and their automated detection (moved to `00-product/`) |
 
 ### 02-database
@@ -158,7 +158,7 @@ The four registers are distinct and an item lives in exactly one of them:
 
 ## Status
 
-**Phase 0 — APPROVED.** **Phase 1A (amended) — `READY_FOR_APPROVAL`.**
+**Phase 0 — APPROVED.** **Phase 1B (foundation) — `READY_FOR_REVIEW`.**
 
 The documentation baseline is accepted. [foundation-plan.md](01-architecture/foundation-plan.md) is
 the amended Phase 1 plan: the frontend boundary now permits one browser-safe API module, and the
