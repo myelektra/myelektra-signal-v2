@@ -206,8 +206,8 @@ PENDING_PAYMENT → PAYMENT_PROCESSING → PAID_ONBOARDING → ACTIVE
 
 | ID | Rule | Tag |
 | --- | --- | --- |
-| BR-PM-01 | **PayPal Business is the only customer checkout provider.** No Mayar, no Midtrans, no Stripe in any path. | `S1` |
-| BR-PM-02 | Currency is USD only. | `S1` |
+| BR-PM-01 | **PayPal Business is the only customer checkout provider.** No Mayar, no Midtrans, no Stripe in any path. All are marked LEGACY — EXCLUDED in [legacy-exclusion-list](legacy-exclusion-list.md). | `S1` |
+| BR-PM-02 | Currency is USD only — for prices, payments, subscriptions, and every PayPal transaction. Enforced by `check (currency = 'USD')`, not by a default. | `S1` |
 | BR-PM-03 | The browser sends a plan key and nothing else about money. It must never send amount, currency override, access state, payment status, role, another tenant's `organization_id`, or any secret/token. | `S1` |
 | BR-PM-04 | Server-side order/subscription creation is the only path to a PayPal transaction. | `S1` |
 | BR-PM-05 | Buyer approval happens through the PayPal JS SDK in the browser; the browser's approval is never sufficient. Server-side webhook verification **and** read-back of the transaction are required before entitlement changes. | `S1` |
@@ -220,6 +220,10 @@ PENDING_PAYMENT → PAYMENT_PROCESSING → PAID_ONBOARDING → ACTIVE
 | BR-PM-12 | Every privileged payment mutation is written to `audit_logs`. | `S1` |
 | BR-PM-13 | There is no public test or debug payment endpoint in any environment. | `S1` |
 | BR-PM-14 | Sandbox and live PayPal configurations are distinct, and selection is environment-driven, never request-driven. | `D` |
+| BR-PM-15 | There is no IDR, no FX rate, no exchange rate, and no currency conversion of any kind. Currency is never derived from country, locale, IP, or preference. | `S1` |
+| BR-PM-16 | All provider costs — OpenAI tokens, search queries, email and any other provider — are recorded in USD. | `S1` |
+| BR-PM-17 | COGS and margin are USD. Margin is USD revenue minus USD COGS; both operands are USD by construction. | `S1` |
+| BR-PM-18 | All monetary values are integer cents. No float or fractional numeric is used for money at any layer. | `S1` |
 
 ---
 

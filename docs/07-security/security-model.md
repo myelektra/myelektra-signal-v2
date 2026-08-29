@@ -99,6 +99,9 @@ missing RLS policy still meets a column `GRANT` denial; a wrong `GRANT` still me
 | Client cron / `setInterval`-driven scheduled work | Source review |
 | Public test/debug checkout route | Route inventory assertion |
 | Legacy migration compatibility layer | Architecture review |
+| `IDR`, `amount_idr`, `fx_rate`, `exchange_rate`, `USD_TO_IDR`, `rupiah` | Currency scan — permitted only inside exclusion documentation, never as a defined field |
+| Currency derived from country, locale, IP, or preference | Source review + test |
+| Any monetary column without `check (currency = 'USD')` | Schema scan |
 
 Detection must be automated. A prohibition enforced only by review will eventually be broken by
 someone who never read this document.
@@ -117,6 +120,12 @@ someone who never read this document.
 - **Cost amplification is a security concern here.** Unbounded batches against paid model and search
   APIs make a triggered cron run an invoice. Bounded batches
   ([R-CR-5](../06-jobs/cron.md#r-cr-5-required-behaviours-s1)) are therefore a security control.
+- **Currency is an integrity boundary, not a preference.** `check (currency = 'USD')` on every
+  monetary column makes a currency-override attack unrepresentable at storage. Currency is never
+  derived from country, locale, IP, or preference
+  ([currency-and-cost-policy R-CU-3](../00-product/currency-and-cost-policy.md#r-cu-3-currency-is-never-derived-from-context-s1)).
+- **Cost attribution is a security control.** An unattributable provider call cannot be investigated,
+  so a spend anomaly has no answer. Every paid call records its organization and job.
 - **Untrusted content from AI providers** is a prompt-injection surface: a scraped page could attempt
   to steer extraction. Structural validation and the evidence gate are the mitigations; model output
   is never treated as an instruction.

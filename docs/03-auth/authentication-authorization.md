@@ -102,6 +102,7 @@ Denials are typed so the UI can render the right state instead of a generic erro
 | Member, `SUSPENDED` | `403 suspended` | Show suspension notice |
 | Member, insufficient role | `403 insufficient_role` | Hide action, show explanation |
 | Cross-tenant attempt | `404` | Indistinguishable from nonexistent — no existence oracle |
+| Client-supplied `currency` in a checkout request | `400 invalid_request` | Currency is USD by constraint and is never accepted from a client |
 
 A cross-tenant attempt returns `404`, not `403`. Returning `403` confirms the resource exists and
 hands an attacker a tenant-enumeration oracle.
@@ -131,6 +132,10 @@ OD-AU-1.
 - **`404` over `403`** for cross-tenant access (R-AU-6) closes the enumeration oracle.
 - **Admin paths are the highest-value target.** Admin authorization is checked in the Edge Function
   on every request, not once per session.
+- **Currency is not a client input.** A request cannot set or influence the currency of a price,
+  payment, or subscription. Currency is USD by `check` constraint, and a request containing a
+  `currency` field is rejected and audited
+  ([currency-and-cost-policy R-CU-3](../00-product/currency-and-cost-policy.md#r-cu-3-currency-is-never-derived-from-context-s1)).
 - **Privileged mutations are audited** (BR-RB-04), including failed authorization attempts for admin
   actions — a repeated `insufficient_role` on an admin endpoint is an attack signal, not noise.
 - **The first `SUPER_ADMIN`** must be provisioned out-of-band (OD-RB-3). An endpoint that grants

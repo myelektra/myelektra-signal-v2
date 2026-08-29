@@ -133,6 +133,7 @@ and the legacy configuration is unavailable.
 | Max attempts | 5 | Enough for transient provider failures, few enough to fail visibly |
 | Backoff | `min(base × 2^(attempt-1), cap)`, base 1 min, cap 60 min | Exponential with a ceiling so retries stay inside the day |
 | Batch size | 25 organizations per dispatch invocation | Keeps a single invocation inside the function budget |
+| Cost ceilings | **Not set — OD-CO-2** | Per-job, per-organization, and per-run USD ceilings. A production daily run is not safe without them |
 | Stale-run threshold | `available_at` older than 24h → admin queue | A run that never started is a visible failure |
 
 **These require approval before implementation** (OD-JB-1). They are marked `D` precisely so that
@@ -175,7 +176,8 @@ mode that is not visible in the admin UI is a failure mode that will be discover
   never logged, and a leak would allow anyone to trigger a full daily run — a cost-amplification
   attack. It is rotated on the same schedule as other secrets ([secrets](../07-security/secrets.md)).
 - **Bounded batches are a cost control as well as a reliability control.** An unbounded run against a
-  paid search or model API is an unbounded invoice.
+  paid search or model API is an unbounded invoice. All cost ceilings are expressed in **USD**; see
+  [currency-and-cost-policy R-CO-2](../00-product/currency-and-cost-policy.md#r-co-2-the-mechanism-d).
 - **Retry backoff prevents provider hammering.** Tight retries against a failing provider can
   trigger rate limiting or account-level throttling that outlasts the incident.
 - **Job rows are tenant-owned** (`organization_id`, INV-1) and are not readable by `CUSTOMER`

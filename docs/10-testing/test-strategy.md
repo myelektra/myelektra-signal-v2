@@ -69,6 +69,8 @@ failures ambiguous.
 | Accessibility checks | Automated axe scan plus keyboard-only navigation of every route | Yes |
 | Mobile visual checks | Responsive pass at 360px, 768px, 1440px on every route | Yes |
 | Secret exposure scan | Build artifacts and source, for keys, tokens, and service-role patterns | Yes |
+| Currency integrity tests | Non-USD insert rejected; `IDR`/`fx_rate`/`exchange_rate`/`USD_TO_IDR`/`rupiah` appear only inside exclusion documentation and are never defined as a field; charged amount equals `packages.price_cents` for all three plans; no float money type | Yes |
+| Exclusion scan | `convex`, `mayar`, `midtrans`, `stripe` absent from the dependency tree and from source outside exclusion docs | Yes |
 
 Every one of these must be an automated, executed check. A manual walkthrough recorded in a document
 is not a check.

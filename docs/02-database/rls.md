@@ -95,6 +95,7 @@ Non-negotiable details:
 | `research_runs` / `signal_jobs` | — | — | — | — | read all | write |
 | `audit_logs` | — | — | — | — | read | read |
 | `payment_events` | — | — | — | — | read | write |
+| `cost_entries` | — | — | — | — | read | insert |
 
 The `—` cells in the CUSTOMER columns for `signals`, `signal_evidence`, `payments`, `subscriptions`,
 `usage`, and `organization_members` are the mechanical expression of BR-SC-12, BR-EV-03, BR-AC-02,
@@ -113,6 +114,8 @@ must not touch specific columns, column-level `GRANT` is used as a second gate:
 | `signal_evidence` | `is_verified`, `verified_by`, `verified_at` | BR-EV-03 |
 | `payments`, `subscriptions` | all | BR-AC-02 |
 | `usage` | `quantity` | BR-PK-07 — a client must not be able to reset its own counter |
+| `cost_entries` | all (`UPDATE`/`DELETE` revoked entirely) | BR-PM-17 — an editable cost history is an editable profit statement |
+| `packages`, `payments`, `cost_entries` | `currency` | BR-PM-02 — currency is USD by `check` constraint and is not writable by anyone; a client-supplied `currency` is rejected at the Edge Function |
 | `audit_logs` | all (`UPDATE`/`DELETE` revoked entirely) | BR-RB-05 |
 
 Implementation: `revoke update on table … from authenticated`, then `grant update (col_a, col_b)`

@@ -39,6 +39,11 @@ and package quotas ([business-rules §6](../00-product/business-rules.md#6-packa
 The environment selector being request-independent is what prevents a production request from being
 routed to sandbox (or the reverse) by a crafted client.
 
+**Both environments are USD.** The PayPal business account, the catalog products, and the plans are
+all configured in USD. Every order, capture, subscription charge, refund, and dispute is a USD
+transaction, and `payments.currency` is constrained to `USD` so a non-USD settlement is not
+representable. No exchange rate is read from the provider and none is stored.
+
 ### R-PP-2 Checkout flow `S1`
 
 ```
@@ -73,7 +78,7 @@ any of:
 | Forbidden field | Why |
 | --- | --- |
 | `amount`, `price`, `total` | Price is server-owned (BR-PM-04, BR-PK-05) |
-| `currency` | USD only (BR-PM-02) |
+| `currency` | USD only (BR-PM-02). Rejected outright — not coerced, not converted. |
 | `access_state`, `status`, `paid` | Access state is server-owned (BR-AC-02) |
 | `role` | Roles are server-owned (BR-RB-02) |
 | `organization_id` for a tenant the caller does not belong to | Tenant scope is derived, not supplied (BR-TI-05) |
@@ -191,7 +196,12 @@ Live cutover is a controlled, documented event, not a flag flip:
   admin override — writes to `audit_logs` (BR-PM-12). An unaudited payment mutation is a defect
   regardless of correctness.
 - **Amount integrity.** The amount charged is read from `packages` at order-creation time and is
-  never accepted from, or reconciled against, the client.
+  never accepted from, or reconciled against, the client. It is USD integer cents throughout.
+- **No currency inference.** Currency is never derived from the buyer's country, the PayPal account's
+  country, or the request locale. There is one value and it is `USD`
+  ([currency-and-cost-policy R-CU-3](../00-product/currency-and-cost-policy.md#r-cu-3-currency-is-never-derived-from-context-s1)).
+- **No Mayar, Midtrans, or Convex path exists**, in any environment, including as dead code
+  ([legacy-exclusion-list](../00-product/legacy-exclusion-list.md)).
 
 ## Acceptance criteria
 

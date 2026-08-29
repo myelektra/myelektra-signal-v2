@@ -126,8 +126,25 @@ These cannot be proposed responsibly without a source. Each is a question, not a
 
 | ID | Question | From |
 | --- | --- | --- |
-| OD-LC-2 | Where is the Clean Clay design system defined? It was in the legacy `DESIGN.md` | [legacy-carryover](../01-architecture/legacy-carryover-decisions.md) |
+| OD-LC-2 | Where is the Clean Clay design system defined? It was in the legacy `DESIGN.md` | [legacy-carryover](legacy-exclusion-list.md) |
 | OD-UI-1 | Homepage copy and evidence-backed positioning claims — what evidence exists to cite? | [homepage](../09-ui/homepage.md) |
+
+## Settled by owner directive — not open
+
+Recorded here so that nobody reopens them, and so the register reflects what is decided as well as
+what is not.
+
+| Decision | Status |
+| --- | --- |
+| All prices, payments, subscriptions, and PayPal transactions are USD | **Settled** — [currency-and-cost-policy](currency-and-cost-policy.md) |
+| OpenAI, search, and email/provider costs are recorded in USD | **Settled** — same |
+| COGS and margin are USD | **Settled** — same |
+| No IDR, no FX, no exchange rate, no USD-to-IDR conversion, no country-based conversion | **Settled** — [legacy-exclusion-list R-LC-5](legacy-exclusion-list.md#r-lc-5-excluded-currency-handling-s1) |
+| No excluded legacy platform or payment provider in any path | **Settled** — the named list is in [legacy-exclusion-list](legacy-exclusion-list.md); it is not restated here |
+| The legacy source is unresolved, **not** unrecoverable | **Settled** — [assumption A-02](assumptions.md) |
+
+The numeric cost ceilings (**OD-CO-2**) and provider unit prices (**OD-CO-3**) remain open. The
+currency they are expressed in does not: it is USD.
 
 ## Recommended resolution order
 
@@ -168,11 +185,15 @@ approved by default, and none may be implemented before approval.**
 | ID | Question or proposal | Raised in | Type |
 | --- | --- | --- | --- |
 | OD-GAP-1 | If the legacy source never arrives, re-specify the `BLOCKED` targets as new product decisions. A product-owner decision; not taken. | [legacy-audit-gap-register.md](legacy-audit-gap-register.md) | `X` |
-| OD-CU-1 | Whether to ever display a non-USD estimate, and how it would be labelled. | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `D` |
-| OD-CO-2 | The numeric cost ceilings: per-job token budget, per-organization daily ceiling, per-run ceiling, per-candidate call limit. **Blocks a safe production daily run.** | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `X` |
-| OD-CO-3 | Provider unit costs, verified against current provider pricing. | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `X` |
-| OD-CO-4 | Whether a ceiling breach pages an operator or only queues an Action Required item. | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `D` |
-| OD-CO-5 | Whether cost telemetry is retained per call or aggregated per job. | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `D` |
+| OD-CU-1 | Whether to ever display a non-USD estimate, and how it would be labelled. | [currency-and-cost-policy.md](currency-and-cost-policy.md) | `D` |
+| OD-CO-2 | The numeric cost ceilings: per-job token budget, per-organization daily ceiling, per-run ceiling, per-candidate call limit. **Blocks a safe production daily run.** | [currency-and-cost-policy.md](currency-and-cost-policy.md) | `X` |
+| OD-CO-3 | Provider unit costs, verified against current provider pricing. | [currency-and-cost-policy.md](currency-and-cost-policy.md) | `X` |
+| OD-CO-4 | Whether a ceiling breach pages an operator or only queues an Action Required item. | [currency-and-cost-policy.md](currency-and-cost-policy.md) | `D` |
+| OD-CO-5 | Whether cost telemetry is retained per call or aggregated per job. | [currency-and-cost-policy.md](currency-and-cost-policy.md) | `D` |
+| OD-CU-2 | Whether a provider that publishes pricing in a non-USD currency may be used at all, given that recording a converted USD unit price is a manual step rather than a stored rate. | [currency-and-cost-policy.md](currency-and-cost-policy.md) | `D` |
+| OD-PR-1 | Whether an annual billing interval is ever offered. Not in the brief; assumed absent. | [pricing.md](../05-billing/pricing.md) | `D` |
+| OD-PR-2 | Whether and how existing subscriptions are repriced on a catalog change. | [pricing.md](../05-billing/pricing.md) | `D` |
+| OD-PR-3 | Whether a free trial exists. Not in the brief; assumed absent (same subject as OD-UI-2). | [pricing.md](../05-billing/pricing.md) | `D` |
 
 ## Appendix — document-local open decisions
 
@@ -217,8 +238,8 @@ Every open decision raised inside a document's own `Open decisions` section, ind
 | OD-ID-3 | Whether client-initiated mutations (for example, creating an opportunity) carry a client-generated idempotency key. Recommended, but not in the brief | [idempotency.md](../06-jobs/idempotency.md) | `D` |
 | OD-JL-1 | Whether leases are renewable mid-execution | [job-lifecycle.md](../06-jobs/job-lifecycle.md) | `D` |
 | OD-JL-2 | Retention for completed job rows | [job-lifecycle.md](../06-jobs/job-lifecycle.md) | `D` |
-| OD-LC-1 | This inventory cannot be confirmed complete without the legacy repository. When it is supplied, re-run the audit and add any additional artefacts found | [legacy-carryover-decisions.md](../01-architecture/legacy-carryover-decisions.md) | `X` |
-| OD-LC-3 | Whether the legacy repository is archived or deleted once v2 is live | [legacy-carryover-decisions.md](../01-architecture/legacy-carryover-decisions.md) | `D` |
+| OD-LC-1 | This inventory cannot be confirmed complete without the legacy repository. When it is supplied, re-run the audit and add any additional artefacts found | [legacy-exclusion-list.md](legacy-exclusion-list.md) | `X` |
+| OD-LC-3 | Whether the legacy repository is archived or deleted once v2 is live | [legacy-exclusion-list.md](legacy-exclusion-list.md) | `D` |
 | OD-MG-1 | Migration tooling: Supabase CLI migrations, or another runner | [migrations.md](../02-database/migrations.md) | `D` |
 | OD-MG-2 | Whether preview environments get a branched database or a shared one (shared with OD-DP-1) | [migrations.md](../02-database/migrations.md) | `D` |
 | OD-MG-3 | Whether packages seed data lives in a migration or is inserted by an admin at setup. Recommend a migration, so prices cannot drift between environments | [migrations.md](../02-database/migrations.md) | `D` |

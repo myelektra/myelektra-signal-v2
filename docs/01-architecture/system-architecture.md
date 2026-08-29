@@ -70,7 +70,8 @@ Dependencies point inward. Violations are architecture bugs, not style issues.
 | Browser → Vercel | Static assets | Nothing sensitive is in the bundle. |
 | Browser → Supabase | JWT + RLS | Client is untrusted for scope, price, role, state. RLS is the gate. |
 | Browser → Edge Function | HTTPS + JWT | Function re-authorizes server-side; it never trusts the route that called it. |
-| PayPal → Edge Function | Webhook | Signature verification + replay protection before any state change. |
+| PayPal → Edge Function | Webhook | Signature verification + replay protection before any state change. USD only; no currency is taken from the provider or the client. |
+| Edge Function → cost ledger | USD cost entries | Every paid provider call is recorded in USD cents, attributed to an organization and a job. |
 | Edge Function → providers | HTTPS + Vault secret | Secrets are read at call time, never embedded, never logged. |
 | pg_cron → Edge Function | Internal invocation | Service-scoped; carries no user identity and therefore grants none. |
 
@@ -110,6 +111,10 @@ must be rejected at review:
 | Client-side secrets | Any secret in the bundle is a leaked secret. |
 | Public test/debug checkout action | Absolute, all environments. |
 | Legacy migration compatibility layer | No Mayar customers or production payment data require migration. |
+| IDR, FX rates, currency conversion | USD is the only currency. See [currency-and-cost-policy](../00-product/currency-and-cost-policy.md). |
+
+The full exclusion list, with automated detection for each entry, is
+[legacy-exclusion-list](../00-product/legacy-exclusion-list.md).
 
 ### R-SA-7 Failure posture `D`
 

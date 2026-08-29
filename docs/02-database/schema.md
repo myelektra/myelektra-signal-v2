@@ -51,7 +51,8 @@ Two additions are required to satisfy `S1` requirements that the conceptual list
 
 | Addition | Why |
 | --- | --- |
-| `packages` | BR-PK-05: the authoritative price must live in the database so the Edge Function can resolve it. Also backs the admin "Packages" screen. |
+| `packages` | BR-PK-05: the authoritative price must live in the database so the Edge Function can resolve it. Also backs the admin "Packages" screen. See [pricing](../05-billing/pricing.md). |
+| `cost_entries` | BR-PM-16/17: OpenAI, search, and email costs must be recorded in USD and attributed, so COGS and margin are computable per organization. |
 | `payment_events` | BR-PM-06/07: webhook idempotency and replay protection require a durable record of every provider event received, keyed by provider event id. |
 
 ### R-DB-2 Universal invariants `S1`
@@ -219,6 +220,27 @@ the legitimate nulls.
 | `processed_at` | `timestamptz null` | |
 | `payment_id` | `uuid null → payments.id` | Link established on settlement |
 | — | `unique (provider, provider_event_id)` | **This constraint is the idempotency guarantee** (BR-PM-06). A replay fails to insert and is therefore a no-op. |
+
+**`cost_entries`** — provider spend, append-only, USD only.
+
+| Column | Type | Notes |
+| --- | --- | --- |
+| `id` | `bigint generated always as identity pk` | |
+| `organization_id` | `uuid not null` | INV-1 — attribution to the tenant that caused the spend |
+| `job_id` | `uuid null → signal_jobs.id` | Attribution to the unit of work; null for non-pipeline spend |
+| `provider` | `text not null` | `OPENAI` / `SEARCH` / `EMAIL` / other named provider |
+| `amount_cents` | `integer not null check (amount_cents >= 0)` | **USD cents** — BR-PM-16, BR-PM-18 |
+| `currency` | `text not null default 'USD' check (currency = 'USD')` | BR-PM-02 — explicit, not implied |
+| `units` | `integer null check (units >= 0)` | Tokens, queries, or messages consumed |
+| `unit_label` | `text null` | What `units` counts |
+| `created_at` | `timestamptz not null default now()` | |
+
+Append-only, like `audit_logs`: `UPDATE` and `DELETE` are revoked and a trigger raises. An editable
+cost history is an editable profit statement. COGS is the sum of these rows for a period; margin is
+USD revenue minus that sum ([currency-and-cost-policy](../00-product/currency-and-cost-policy.md)).
+
+No `amount_idr`, `fx_rate`, or `exchange_rate` column exists in this schema, and none may be added
+([legacy-exclusion-list R-LC-5](../00-product/legacy-exclusion-list.md#r-lc-5-excluded-currency-handling-s1)).
 
 **`signal_jobs`** — fields mandated verbatim by BR-JB-02.
 
