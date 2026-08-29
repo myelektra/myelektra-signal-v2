@@ -158,11 +158,14 @@ The four registers are distinct and an item lives in exactly one of them:
 
 ## Status
 
-**Phase 0 — APPROVED.** **Phase 1A (foundation planning) — `READY_FOR_REVIEW`.**
+**Phase 0 — APPROVED.** **Phase 1A (amended) — `READY_FOR_APPROVAL`.**
 
 The documentation baseline is accepted. [foundation-plan.md](01-architecture/foundation-plan.md) is
-the Phase 1 plan. No application code, migration, policy, or integration has been created, and none
-will be until that plan is approved and [assumption A-12](00-product/assumptions.md) is signed off.
+the amended Phase 1 plan: the frontend boundary now permits one browser-safe API module, and the
+Bun/Deno sharing strategy was **resolved by spike** rather than assumed — strategy A, a Deno import
+map to the shared TypeScript source. [A-12](00-product/assumptions.md) is approved.
+
+No application code, migration, policy, or integration has been created.
 
 See [production-checklist](10-testing/production-checklist.md#current-state) for the honest state,
 and [open-decisions](00-product/open-decisions.md) for what remains blocked.

@@ -63,9 +63,22 @@ These are product economics and product behaviour. The brief forbids inventing t
 | **A-09** | The `score_components` column is validated to contain exactly the six briefed keys, so a published Signal can never be missing one the UI must render. | Extends the briefed requirement that all six components are present | Schema, Signal detail UI | A decision to use six typed columns — OD-DB-1 | PROPOSED |
 | **A-10** | Cross-tenant access attempts return `404`, not `403`. | The brief prohibits cross-tenant access but does not specify the status code; `404` avoids an existence oracle | Every endpoint, the denial contract | A product or support requirement to distinguish the two | PROPOSED |
 | **A-11** | Audit logging covers failed privileged attempts as well as successful ones. | Extends the briefed rule that privileged mutations are audited; failed attempts are the probing signal | `audit_logs`, admin Audit Log surface | A decision that failures are noise | PROPOSED |
-| **A-12** | Repository layout is `apps/web`, `packages/domain`, `supabase/functions`, with the dependency rule enforced by lint rather than convention. | The brief requires business rules stay out of React but names no layout | Phase 1 scaffolding, CI boundary check | An owner preference — OD-SA-1 | PROPOSED |
+| **A-12** | Repository layout is `apps/web`, `packages/domain`, `packages/contracts`, `packages/adapters`, `supabase/functions`, with the dependency rule enforced by lint rather than convention. | The brief requires business rules stay out of React but names no layout | Phase 1 scaffolding, CI boundary check | An owner preference — OD-SA-1 | **APPROVED** |
 | **A-13** | The daily run is drained by a separate worker invocation rather than one long dispatcher call. | Extends the briefed rule that the daily process must not be one long unresumable function | Cron design, adds a third schedule | An owner decision — OD-JB-2 | PROPOSED |
 | **A-14** | Where a UI state is unspecified, the eight briefed states are the complete set; no additional states are invented. | Brief enumerates exactly eight | Every route in Phase 5 and 6 | A design review finding a ninth | PROPOSED |
+
+**A-12 was approved on 2026-08-29**, on the grounds that the layout preserves the intended dependency
+direction and separates frontend, domain rules, contracts, adapters, and Supabase server functions.
+That clears the R-AS-4 block on Phase 1B. See
+[foundation-plan R-FN-15](../01-architecture/foundation-plan.md#r-fn-15-a-12-approval-s1).
+
+The approval also **amends the boundary rule** written under A-12. "`apps/web` imports `contracts`
+only" was too strict to be workable — the SPA must reach Supabase Auth and Edge Functions. The
+corrected boundary permits exactly one browser-safe API module and forbids every privileged import;
+see [foundation-plan R-FN-2](../01-architecture/foundation-plan.md#r-fn-2-frontend--backend-boundary-s1).
+
+Note that the A-12 row above originally listed only three of the five locations. It is corrected here
+so the approved record matches the approved layout.
 
 ### R-AS-4 Promotion and rejection `D`
 

@@ -17,11 +17,13 @@ Vercel  →  React / Vite / TypeScript SPA
 
 ## Status
 
-**Phase 0 — APPROVED.** **Phase 1A (foundation planning) — `READY_FOR_REVIEW`.**
+**Phase 0 — APPROVED.** **Phase 1A (amended) — `READY_FOR_APPROVAL`.**
 
-The documentation baseline is accepted. The Phase 1 plan is at
-[`docs/01-architecture/foundation-plan.md`](docs/01-architecture/foundation-plan.md). No application
-code, schema, migration, or integration exists yet.
+The documentation baseline is accepted. The amended Phase 1 plan is at
+[`docs/01-architecture/foundation-plan.md`](docs/01-architecture/foundation-plan.md): the frontend
+boundary permits one browser-safe API module, and the Bun/Deno sharing question was settled by a
+toolchain spike (strategy A — Deno import map to shared TypeScript source). No application code,
+schema, migration, or integration exists yet.
 
 Start with [`docs/README.md`](docs/README.md).
 

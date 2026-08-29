@@ -176,7 +176,7 @@ approved by default, and none may be implemented before approval.**
 | A-09 | `score_components` is validated to contain exactly the six briefed keys (same subject as OD-DB-1). | `D` |
 | A-10 | Cross-tenant attempts return `404`, not `403`, to avoid an existence oracle. | `D` |
 | A-11 | Failed privileged attempts are audited as well as successful ones. | `D` |
-| A-12 | Repository layout is `apps/web`, `packages/domain`, `supabase/functions` (same subject as OD-SA-1). | `D` |
+| A-12 | Repository layout is `apps/web`, `packages/domain`, `packages/contracts`, `packages/adapters`, `supabase/functions`. **APPROVED 2026-08-29** — clears the R-AS-4 block on Phase 1B. | `S1` |
 | A-13 | The daily run is drained by a separate worker invocation (same subject as OD-JB-2). | `D` |
 | A-14 | The eight briefed UI states are the complete set; no ninth is invented. | `D` |
 
@@ -194,7 +194,7 @@ approved by default, and none may be implemented before approval.**
 | OD-PR-1 | Whether an annual billing interval is ever offered. Not in the brief; assumed absent. | [pricing.md](../05-billing/pricing.md) | `D` |
 | OD-PR-2 | Whether and how existing subscriptions are repriced on a catalog change. | [pricing.md](../05-billing/pricing.md) | `D` |
 | OD-PR-3 | Whether a free trial exists. Not in the brief; assumed absent (same subject as OD-UI-2). | [pricing.md](../05-billing/pricing.md) | `D` |
-| OD-FN-1 | Deno module resolution for `packages/adapters` from `supabase/functions` — Bun workspaces and Deno do not share resolution; needs an import map or a vendored copy. **Verify before committing to the layout.** | [foundation-plan.md](../01-architecture/foundation-plan.md) | `X` |
+| ~~OD-FN-1~~ | **RESOLVED by spike.** Strategy A — Deno import map to shared TypeScript source. Verified: `deno check` exit 0 and a runtime response from the shared domain function. Variant B fails with `TS2307`; variant C typechecks but diverges silently and is rejected. | [foundation-plan.md](../01-architecture/foundation-plan.md) | `S1` |
 | OD-FN-2 | ESLint flat config versus legacy config, and which import-boundary plugin. | [foundation-plan.md](../01-architecture/foundation-plan.md) | `D` |
 | OD-FN-3 | Whether preview deployments share one staging project or use per-PR branching (same subject as OD-DP-1, OD-MG-2). | [foundation-plan.md](../01-architecture/foundation-plan.md) | `D` |
 

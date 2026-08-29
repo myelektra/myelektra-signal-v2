@@ -83,18 +83,54 @@ Enforced three ways, because a boundary held only by review will be crossed:
 | **ESLint import-boundary rule** | Fails the build on a forbidden import, with a message naming the rule |
 | **Bundle scan** | Catches what the other two miss — a secret or service-role reference in build output |
 
-The rule, restated from [R-SA-3](system-architecture.md#r-sa-3-dependency-rules-d):
+**Amended.** The original rule — "`apps/web` imports `contracts` only" — was too strict. The SPA
+must authenticate with Supabase and call Edge Functions, and a boundary that forbids that would
+simply be bypassed in the first week. The corrected rule permits a browser-safe API path and forbids
+everything privileged.
 
 | Layer | May import |
 | --- | --- |
 | `packages/domain` | Nothing outside itself |
 | `packages/contracts` | Nothing outside itself |
-| `packages/adapters` | `domain`, `contracts` |
+| `packages/adapters` | `domain`, `contracts`, server environment |
 | `supabase/functions` | `domain`, `contracts`, `adapters` |
-| `apps/web` | `contracts` only |
+| `apps/web/src/api/**` | `contracts`, `@supabase/supabase-js`, the PayPal **JS SDK** loader |
+| `apps/web/**` (everything else) | `contracts`, and `./api` only |
 
-`apps/web` importing `contracts` and nothing else is the whole point: it is how "business rules never
-live in React" stays true as the codebase grows and as new contributors arrive.
+The approved request path is exactly:
+
+```
+apps/web  →  contracts  →  apps/web/src/api  →  Supabase Auth / Edge Function endpoint
+```
+
+Rules that make this safe:
+
+| Rule | Enforcement |
+| --- | --- |
+| `@supabase/supabase-js` may be imported from **one module only**: `apps/web/src/api/client.ts` | ESLint `no-restricted-imports` with a path exception |
+| That module is constructed with `VITE_SUPABASE_ANON_KEY` and **never** a service-role key | Lint + bundle scan + a runtime assertion in `client.ts` |
+| Every other module in `apps/web` imports the API surface from `./api`, never a client directly | ESLint boundary rule |
+| The PayPal JS SDK is loaded only in `apps/web/src/api/`, with the **public** client id | Same |
+
+**Never importable from `apps/web`, in any module:**
+
+| Forbidden | Why |
+| --- | --- |
+| `packages/domain` | Business rules must not run in the browser |
+| `packages/adapters` | Server-only provider clients |
+| Provider SDKs (PayPal server SDK, OpenAI, search, email) | Secrets and server-side calls |
+| Any module referencing the service-role key | Total-compromise secret |
+| Domain persistence implementations | Data access belongs behind the API boundary |
+
+**On `@supabase/supabase-js` being a "database client".** It is one, and the prohibition is on
+database clients *with privileged access*. Initialized with the anon key it is not privileged: every
+query it makes is subject to RLS, which is precisely the control
+[rls.md](../02-database/rls.md) specifies. What remains forbidden is using it to write protected
+columns — those go through server-only RPCs
+([schema R-DB-7](../02-database/schema.md#r-db-7-protected-fields-and-their-enforcement-s1--d)).
+
+The narrowed rule still delivers the original intent: business rules never reach the browser, because
+`packages/domain` is unimportable from `apps/web` and the API surface is the only door out.
 
 ### R-FN-3 Environment variable inventory `S1`
 
@@ -221,6 +257,8 @@ job: verify
   1. setup bun
   2. bun install --frozen-lockfile
   3. bun tsc -b --noEmit          ── typecheck + boundary
+  3b. deno check --config supabase/deno.json supabase/functions/**/index.ts
+  3c. deno lint supabase/functions && deno fmt --check supabase
   4. bun run lint                 ── style + boundary
   5. bun test                     ── domain unit tests
   6. bun run build                ── produces dist
@@ -301,7 +339,9 @@ apps/web/tsconfig.json
 apps/web/index.html
 apps/web/src/main.tsx              mount point only
 apps/web/src/App.tsx               placeholder shell — no screens
-apps/web/.eslintrc.cjs             includes the import-boundary rule
+apps/web/src/api/client.ts         the ONLY module allowed to import @supabase/supabase-js
+apps/web/src/api/index.ts          the API surface the rest of apps/web imports
+apps/web/.eslintrc.cjs             boundary rules incl. the single-module supabase-js exception
 
 packages/domain/package.json
 packages/domain/tsconfig.json
@@ -316,7 +356,8 @@ packages/adapters/tsconfig.json
 packages/adapters/src/index.ts     empty public surface
 
 supabase/config.toml               project config; no migrations
-supabase/functions/.gitkeep        directory exists; no functions yet
+supabase/deno.json                 the R-FN-12 import map (validated by the spike)
+supabase/functions/spike/index.ts  the R-FN-12 validation function; dependency-free, no product logic
 
 scripts/check-docs.ts              ported from the Phase 0 checker
 scripts/check-currency.ts
@@ -346,6 +387,106 @@ Nothing in the deferred list is created in Phase 1, including as a stub, placeho
 migration. A placeholder migration invites someone to fill it in before the schema decision is
 approved, which is what the operating rule against premature migrations exists to prevent.
 
+### R-FN-12 Bun/Deno sharing strategy — spike result `D`
+
+OD-FN-1 asked whether `supabase/functions` can consume `packages/domain` and `packages/contracts`.
+It was answered empirically rather than assumed. The spike ran outside the repository in a throwaway
+tree and implemented no product feature, schema, migration, policy, auth, payment, cron, or screen.
+
+**Environment used:** `deno 2.9.6 (stable, x86_64-unknown-linux-gnu, typescript 6.0.3)`, `bun 1.4.0`,
+`node v22.22.3`. Deno was installed via `npm install -g deno` because `deno.land` is unreachable from
+this sandbox.
+
+**Spike contents:** one dependency-free domain function (`sumCents`), one contracts module
+(`PingResponse`, `PING_PATH`), and one minimal Edge Function importing both.
+
+| Variant | Result | Evidence |
+| --- | --- | --- |
+| **A — Deno import map to shared TS source** | **WORKS** | `deno check` exit 0; `deno run` served `{"path":"/ping","ok":true,"total":6}` |
+| B — `nodeModulesDir` / node_modules resolution | **FAILS** | `TS2307: Import "@myelektra/domain" not a dependency` |
+| C — copied `_shared` source | **WORKS, AND IS UNSAFE** | See below |
+| Bare specifier with no import map | **FAILS** (negative control) | `TS2307` for both packages |
+
+**Selected: Strategy A.** `supabase/deno.json` maps the bare specifiers to the shared TypeScript
+source:
+
+```json
+{
+  "imports": {
+    "@myelektra/domain":    "../packages/domain/src/index.ts",
+    "@myelektra/contracts": "../packages/contracts/src/index.ts"
+  }
+}
+```
+
+Three properties make A the right choice:
+
+1. **One source of truth.** Deno reads the same `.ts` files Bun and `tsc` read. Nothing is generated,
+   copied, or vendored.
+2. **Types cross the boundary for real.** Introducing a deliberate type error produced
+   `TS2322: Type 'string' is not assignable to type 'boolean'`, with the expected-type note pointing
+   into `packages/contracts/src/index.ts`. Deno is checking the shared source, not a snapshot.
+3. **No build step.** The packages expose `src/index.ts` directly, so there is no stale-output window.
+
+**Why variant C is rejected — demonstrated, not asserted.** With a copied `_shared` tree, changing
+`contracts` to require `ok: "YES" | "NO"` left the copy's `deno check` **still passing at exit 0**.
+Divergence was completely undetected. That is the exact failure the operating rule against copying
+business logic exists to prevent: two locations, no source of truth, and a green typecheck hiding the
+drift.
+
+**Two findings that changed the plan.** Bun created **no** `node_modules/@myelektra/` links, even
+after `apps/web` declared `workspace:*` dependencies — so variant B was never viable. Bun does
+nonetheless resolve workspace packages at runtime: a probe importing `@myelektra/contracts` from
+`apps/web` printed `resolved: /ping`. The two runtimes resolve independently, which is exactly why
+the import map is required rather than optional.
+
+### R-FN-13 Validation commands `D`
+
+Run in CI and locally. All four passed in the spike.
+
+```bash
+# Deno side — typecheck the Edge Function entrypoints against the shared source
+deno check --config supabase/deno.json supabase/functions/**/index.ts
+deno lint  supabase/functions
+deno fmt --check supabase/functions supabase/deno.json
+
+# Bun side — typecheck the workspace, including the same shared source
+bun tsc -b --noEmit
+```
+
+Both sides typecheck `packages/domain` and `packages/contracts`. That redundancy is deliberate: `tsc`
+enforces the browser-facing view and the project references, `deno check` enforces what the Edge
+Function runtime will actually accept. A change that satisfies one and not the other is caught
+before deploy.
+
+### R-FN-14 Fallback if strategy A fails `D`
+
+A is verified, but it rests on Deno resolving a relative path outside the function directory. If a
+future Supabase deploy step rejects that — for example by uploading only `supabase/functions/` — the
+fallback is **strategy C with enforced one-way generation**, not a hand-maintained copy:
+
+```
+1. packages/domain and packages/contracts stay the only source of truth.
+2. A build step generates supabase/functions/_shared/ from them.
+3. _shared/ is git-ignored and never edited by hand.
+4. CI regenerates it and fails if the committed tree differs — so drift becomes a red build
+   rather than a silent divergence.
+```
+
+The distinction from the rejected variant C is the generated-and-verified part. The spike showed that
+a *copied* tree diverges silently; a *generated* tree that CI re-derives and compares cannot.
+
+Trigger for the fallback: any `supabase functions deploy --dry-run` or bundle step that fails to
+resolve `../packages/*`. Until that is observed, A stands.
+
+### R-FN-15 A-12 approval `S1`
+
+The repository layout in R-FN-1 — `apps/web`, `packages/domain`, `packages/contracts`,
+`packages/adapters`, `supabase/functions` — is **APPROVED**. It was accepted because it preserves the
+intended dependency direction and separates frontend, domain rules, contracts, adapters, and Supabase
+server functions. [Assumption A-12](../00-product/assumptions.md) moves from `PROPOSED` to `APPROVED`,
+which clears the R-AS-4 block on Phase 1B.
+
 ## Security considerations
 
 - **The `VITE_` prefix is the bundle-safety mechanism**, not a naming preference. An unprefixed
@@ -366,7 +507,11 @@ approved, which is what the operating rule against premature migrations exists t
 
 Phase 1B is complete when:
 
-- [ ] A-12 is approved and the layout in R-FN-1 exists on disk.
+- [ ] A-12 is approved (**done** — R-FN-15) and the layout in R-FN-1 exists on disk.
+- [ ] The R-FN-13 commands pass in CI: `deno check`, `deno lint`, `deno fmt --check`, `bun tsc -b --noEmit`.
+- [ ] The spike function resolves both shared packages through `supabase/deno.json` and runs.
+- [ ] `@supabase/supabase-js` is imported from `apps/web/src/api/client.ts` and nowhere else — asserted by lint.
+- [ ] A deliberate import of `packages/domain` from `apps/web` fails `tsc` **and** `lint`.
 - [ ] All five commands pass on a clean checkout, locally and in CI.
 - [ ] A deliberate cross-boundary import in `apps/web` fails both `tsc` and `lint`.
 - [ ] `bun install` resolves with no prohibited dependency, including transitive.
@@ -389,9 +534,11 @@ Phase 1B is complete when:
 
 ## Open decisions
 
-Blocking Phase 1B:
+Resolved by this amendment:
 
-- **A-12 / OD-SA-1** — approve the repository layout. Nothing is implemented until this is signed off.
+- **A-12 / OD-SA-1** — **APPROVED** (R-FN-15). Phase 1B is unblocked.
+- **OD-FN-1** — **RESOLVED** by spike (R-FN-12). Strategy A: Deno import map to shared TypeScript
+  source. Variant B fails (`TS2307`); variant C works but diverges silently and is rejected.
 
 Needed during Phase 1B:
 
@@ -403,9 +550,6 @@ Needed during Phase 1B:
 
 Raised by this plan:
 
-- **OD-FN-1** — Deno module resolution for `packages/adapters` from `supabase/functions`. Bun workspaces
-  and Deno do not share resolution by default; an import map or a vendored copy is needed. Verify
-  before committing to the layout.
 - **OD-FN-2** — ESLint flat config versus legacy config, and the specific boundary plugin.
 - **OD-FN-3** — Whether preview deployments share one staging Supabase project or use per-PR branching
   (same subject as OD-DP-1, OD-MG-2).
