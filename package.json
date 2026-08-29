@@ -1,0 +1,39 @@
+{
+  "name": "myelektra-signal-v2",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "bun@1.4.0",
+  "engines": {
+    "bun": ">=1.2.0",
+    "node": ">=20.0.0"
+  },
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "typecheck": "tsc -b --noEmit",
+    "test": "bun test",
+    "lint": "eslint .",
+    "lint:fix": "eslint . --fix",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "build": "bun run --filter @myelektra/web build",
+    "preview": "bun run --filter @myelektra/web preview",
+    "check:docs": "python3 scripts/check-docs.py",
+    "check:usd": "python3 scripts/check-usd-only.py",
+    "check:boundaries": "python3 scripts/check-boundaries.py",
+    "check:deno": "deno check --config supabase/deno.json supabase/functions/**/index.ts && deno lint supabase/functions && deno fmt --check supabase/deno.json supabase/functions",
+    "check": "bun run typecheck && bun run lint && bun test && bun run build && bun run check:docs && bun run check:usd && bun run check:boundaries"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.5",
+    "bun-types": "^1.3.9",
+    "eslint": "^9.39.5",
+    "globals": "^16.5.0",
+    "prettier": "^3.9.6",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.68.0"
+  }
+}

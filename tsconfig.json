@@ -1,0 +1,34 @@
+{
+  "$schema": "https://json.schemastore.org/tsconfig",
+  // One solution project for the whole workspace.
+  //
+  // This is deliberate, not an oversight. `tsc -b --noEmit` propagates --noEmit
+  // into every referenced project, and a composite referenced project may not
+  // disable emit — TS6310. Verified on TypeScript 5.9.3 and 6.0.3. So the
+  // required gate command and TS project references cannot both be used; the
+  // gate command wins.
+  //
+  // Per-package isolation is therefore enforced elsewhere, and not less
+  // strictly:
+  //   * module resolution — bun links only declared dependencies, so
+  //     apps/web/node_modules/@myelektra/ contains contracts and nothing else,
+  //     which makes `import "@myelektra/domain"` from apps/web a TS2307;
+  //   * eslint.config.js — import-boundary rules and `no-restricted-globals`
+  //     for browser vs server globals;
+  //   * scripts/check-boundaries.py — an independent, dependency-free scan.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "tsBuildInfoFile": "node_modules/.tmp/tsconfig.tsbuildinfo",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "jsx": "react-jsx",
+    "types": ["bun-types"]
+  },
+  "include": [
+    "apps/web/src",
+    "apps/web/vite.config.ts",
+    "packages/domain/src",
+    "packages/contracts/src",
+    "packages/adapters/src"
+  ]
+}

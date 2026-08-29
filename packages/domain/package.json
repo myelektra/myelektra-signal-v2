@@ -1,0 +1,15 @@
+{
+  "name": "@myelektra/domain",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Pure domain core. No I/O, no database, no provider SDKs. Imported by supabase/functions via the supabase/deno.json import map, never by apps/web.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "bun test"
+  }
+}

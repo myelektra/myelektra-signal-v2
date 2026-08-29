@@ -1,0 +1,15 @@
+# Generated or vendored content.
+node_modules
+dist
+dist-types
+bun.lock
+
+# Deno owns the formatting of the Edge Function tree; `deno fmt --check` is the
+# gate there. Letting Prettier touch it too would mean two formatters fighting.
+supabase/deno.json
+supabase/functions
+
+# The Phase 0 documentation baseline is hand-wrapped and its 615 internal links
+# are verified by scripts/check-docs.py. Re-wrapping 44 approved documents is
+# not a formatting task and would put those links at risk for no benefit.
+docs
