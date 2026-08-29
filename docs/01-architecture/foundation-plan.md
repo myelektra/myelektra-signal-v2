@@ -353,8 +353,8 @@ apps/web/src/index.css             skip link, focus indicator, AA contrast
 apps/web/src/vite-env.d.ts         the four browser variables, typed
 apps/web/src/api/env.ts            reads and validates the browser environment
 apps/web/src/api/client.ts         the ONLY module allowed to import @supabase/supabase-js
+apps/web/src/api/client.test.ts    executes the service-role rejection; not bundled
 apps/web/src/api/index.ts          the API surface the rest of apps/web imports
-apps/web/src/api/*.test.ts         (none yet)
 
 packages/domain/{package.json,src/index.ts,src/index.test.ts}
 packages/contracts/{package.json,src/index.ts,src/index.test.ts}
@@ -383,9 +383,15 @@ scripts/check-boundaries.py        the R-FN-2 boundary, the import map, the env 
 | `AGENTS.md`, `supabase/config.toml` | **not created** | Outside the approved Phase 1B file set |
 | `scripts/secret-scan.sh` | inline CI step | Same reason; a dedicated scanner is OD-SE-1 |
 
-**One addition beyond the list:** three `*.test.ts` files. `bun test` is a required gate, and a suite
+**One addition beyond the list:** four `*.test.ts` files. `bun test` is a required gate, and a suite
 with zero tests passes vacuously — the same failure mode R-FN-8 warns about for an empty migrations
-directory. They assert only the placeholder surface.
+directory. Three assert only the placeholder surface. The fourth, `client.test.ts`, executes the
+service-role rejection in `client.ts`; without it that control was asserted in review and never run.
+
+`client.test.ts` is the one file besides `client.ts` permitted to contain the service-role role name,
+because a test of a guard must construct what the guard rejects. Test files are never bundled — Vite
+includes only what is reachable from the entry point, verified by finding zero `bun:test` references
+in `apps/web/dist` — and the credential scan over `dist` is the compensating control.
 
 Every `src/index.ts` holds identity constants and, in `domain`, one pure predicate used by the spike.
 No domain surface whose shape depends on a blocked decision is pre-built.
@@ -529,7 +535,10 @@ Phase 1B is complete when:
 
 - [x] A-12 is approved (**done** — R-FN-15) and the layout in R-FN-1 exists on disk.
 - [x] The R-FN-13 commands pass: `deno check`, `deno lint`, `deno fmt --check`, `bun tsc -b --noEmit`.
-      Verified locally; the CI run is pending the first pull request.
+      Verified locally. The CI run is **blocked**: the connected GitHub App has no `workflows`
+      permission, so `.github/workflows/quality.yml` cannot be pushed. As the closest substitute, all
+      fifteen `run:` steps of the `verify` job were extracted from the workflow and executed in order
+      under `bash -e`, GitHub Actions' own shell; all fifteen passed.
 - [x] The spike function resolves both shared packages through `supabase/deno.json` and runs —
       `GET /spike` returned `{"ok":true,"domain":"@myelektra/domain@0.0.0","predicate":true}`.
 - [x] `@supabase/supabase-js` is imported from `apps/web/src/api/client.ts` and nowhere else —
@@ -554,9 +563,13 @@ Phase 1B is complete when:
       or page directory.
 - [x] No production-readiness claim is made.
 - [ ] **The Vercel project builds the SPA and serves a placeholder shell.** Blocked: no Vercel
-      project exists. The build is verified locally; the deployment is not.
+      project, no `VERCEL_TOKEN`, and no Vercel CLI exist in this environment, so a deployment cannot
+      be attempted. Vercel's contract is verified locally instead — built from root `apps/web` into
+      `dist`, then served as a static SPA: HTTP 200 on `/`, both hashed assets 200, zero `.map` files
+      and zero `sourceMappingURL` comments. What remains unverified is the deployment itself.
 - [ ] **`pg_net` availability and the Edge Function limits are recorded** (OD-JB-4, OD-BE-2).
-      Blocked: no Supabase project exists, and neither can be answered without one.
+      Blocked: no Supabase project, no `SUPABASE_ACCESS_TOKEN`, and no Supabase CLI exist in this
+      environment. Neither question can be answered without a live project.
 
 The two open items are the only Phase 1B criteria not met, and both are blocked on infrastructure
 this repository cannot create from here. Neither blocks Phase 2 design; both must be resolved before
