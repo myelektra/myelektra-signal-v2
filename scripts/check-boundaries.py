@@ -178,12 +178,20 @@ def check_web(report: Report) -> None:
         in_api = path.parent == WEB_API or str(path.parent).startswith(f"{WEB_API.as_posix()}/")
         is_client = path.resolve() == WEB_CLIENT.resolve()
         is_tooling = path.name == "vite.config.ts"
+        is_test = path.name.endswith((".test.ts", ".test.tsx"))
 
         if is_client:
             client_seen = True
 
         for spec in specifiers_in(path):
             pkg = base_package(spec)
+
+            # The test runner is not a shipped dependency.
+            if spec == "bun:test":
+                if is_test:
+                    continue
+                report.fail(f"{where} imports bun:test outside a test file")
+                continue
 
             # Never importable from anywhere in apps/web.
             if pkg in (DOMAIN_SPEC, ADAPTERS_SPEC):
@@ -245,9 +253,15 @@ def check_web(report: Report) -> None:
         )
 
     # No server-only credential name anywhere except the module that rejects it.
+    # That module's own test is exempt for the same reason it is not shipped:
+    # Vite bundles only what is reachable from the entry point, so a test file
+    # never reaches the browser. The credential scan over apps/web/dist is the
+    # compensating control.
     for path in source_files(WEB):
         where = rel(path)
         if path.resolve() == WEB_CLIENT.resolve():
+            continue
+        if path.name == "client.test.ts":
             continue
         body = path.read_text(encoding="utf-8", errors="replace")
         if re.search(SERVER_ONLY_ROLE_LITERAL, body, re.I):

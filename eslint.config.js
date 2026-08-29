@@ -196,10 +196,18 @@ export default tseslint.config(
   },
 
   // A server-only credential name appears nowhere in apps/web except the one
-  // module that exists to reject it.
+  // module that exists to reject it — and that module's own test, which has to
+  // construct the thing it is proving is rejected. Test files are never
+  // bundled: Vite only includes what is reachable from the entry point, and
+  // `bun:test` does not resolve in a browser build. The credential scan over
+  // apps/web/dist is the compensating control if that ever changes.
   {
     files: ["apps/web/**/*.{ts,tsx}"],
-    ignores: ["apps/web/src/api/client.ts", "apps/web/vite.config.ts"],
+    ignores: [
+      "apps/web/src/api/client.ts",
+      "apps/web/src/api/client.test.ts",
+      "apps/web/vite.config.ts",
+    ],
     rules: { "no-restricted-syntax": SERVICE_ROLE_SYNTAX_RULES },
   },
 
