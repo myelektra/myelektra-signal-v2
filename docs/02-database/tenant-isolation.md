@@ -31,14 +31,17 @@ and is treated as such in review and in incident response.
 | Layer | Mechanism | Stops |
 | --- | --- | --- |
 | Schema | `organization_id not null` + FK on every tenant-owned row | Orphaned or unscoped data |
-| RLS | Deny-by-default policies keyed on JWT-derived membership | Direct client reads and writes |
-| Column `GRANT` | Denial on `role`, `access_state`, `score`, `is_verified` | Escalation through a permitted row |
+| RLS | Deny-by-default policies keyed on JWT-derived membership | Direct client reads and writes — **row-level only** |
+| Column `REVOKE` | Denial on `role`, `access_state`, `score`, `currency`, `amount_usd`, `is_verified` | Escalation through a permitted row |
+| `BEFORE UPDATE` trigger | Changing an immutable field, even by a privileged role | Accidental or future-policy-mistake writes |
+| `CHECK` constraint | Representing an invalid value — non-USD currency, negative amount, out-of-range score | Data that no code path intended |
 | Edge Function | Explicit authorization; scope derived from JWT | Action-level abuse of the service role |
 | Uniqueness | Composite keys including `organization_id` | Cross-tenant interference via deduplication |
 | Response code | `404` for cross-tenant attempts | Existence enumeration |
 
 No layer is sufficient alone. RLS is void inside a service-role function; function authorization does
-not constrain a direct client database read. The stack is the control.
+not constrain a direct client database read; and **RLS cannot protect a column**, so a field that must
+not change needs a `REVOKE` and a trigger. The stack is the control.
 
 ### R-TI-3 Scope derivation `S1`
 
@@ -110,6 +113,8 @@ deanonymize a tenant by elimination. Minimum-cohort suppression is cheap and pre
 - [ ] A cross-tenant attempt returns `404` and is audited.
 - [ ] No query joins `signals`, `payments`, or any tenant table across organizations.
 - [ ] Every `SECURITY DEFINER` function pins `search_path`.
+- [ ] Each protected column is guarded by the mechanism that can actually guard it — `REVOKE` and/or
+      trigger — and not by an RLS policy alone.
 - [ ] No permissive fallback policy exists on any tenant-owned table.
 - [ ] Admin aggregates suppress cohorts below the minimum size.
 

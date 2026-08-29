@@ -36,7 +36,7 @@ threats with no specific manifestation here, and the control specifications them
 | --- | --- | --- | --- | --- |
 | T-01 | Cross-tenant read via a client-supplied `organization_id` | Customer | Scope derivation + RLS + `404` ([R-TI-3](../02-database/tenant-isolation.md#r-ti-3-scope-derivation-s1)) | Low |
 | T-02 | Cross-tenant write via a permissive policy | Customer | Deny-by-default, no fallback ([R-RL-1](../02-database/rls.md#r-rl-1-posture-s1)) | Low |
-| T-03 | Privilege escalation by editing `role` | Customer | Column `GRANT` denial ([R-RL-4](../02-database/rls.md#r-rl-4-restricted-columns-s1)) | Low |
+| T-03 | Privilege escalation by editing `role` | Customer | Column `GRANT` denial ([R-RL-4](../02-database/rls.md#r-rl-4-column-protection-is-not-rls-s1)) | Low |
 | T-04 | Self-granting access by editing `access_state` | Customer | Column `GRANT` denial; server-owned transitions | Low |
 | T-05 | Inflating a Signal score | Customer | No `UPDATE` on `score*`; immutability (BR-SC-12) | Low |
 | T-06 | Self-verifying evidence to publish a Signal | Customer | No `UPDATE` on `is_verified`; DB publication gate | Low |

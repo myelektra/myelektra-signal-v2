@@ -121,7 +121,7 @@ product defensible when a customer asks why a Signal scored 78.
 - The publication gate is a **trust control**, not a data-quality nicety. A Signal without evidence
   is an unsupported commercial claim sold to a customer.
 - `published_at` and `score` are write-denied to customers
-  ([rls](../02-database/rls.md#r-rl-4-restricted-columns-s1)); a customer cannot manufacture or
+  ([rls](../02-database/rls.md#r-rl-4-column-protection-is-not-rls-s1)); a customer cannot manufacture or
   inflate a Signal.
 - Candidate data is derived from external sources and is untrusted until structurally validated
   ([validation](validation.md)).

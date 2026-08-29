@@ -157,6 +157,8 @@ The four registers are distinct and an item lives in exactly one of them:
 
 ## Status
 
-**Phase 0 only.** No feature implementation has begun, per the operating rule that the documentation
-baseline is written and reviewed first. See
-[production-checklist](10-testing/production-checklist.md#current-state) for the honest state.
+**Phase 0 — `READY_FOR_APPROVAL`.** The documentation baseline passed its final correctness pass.
+No feature implementation, migration, or PayPal integration has begun.
+
+See [production-checklist](10-testing/production-checklist.md#current-state) for the honest state,
+and [open-decisions](00-product/open-decisions.md) for what remains blocked.

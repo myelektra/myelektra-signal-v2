@@ -223,7 +223,7 @@ PENDING_PAYMENT → PAYMENT_PROCESSING → PAID_ONBOARDING → ACTIVE
 | BR-PM-15 | There is no IDR, no FX rate, no exchange rate, and no currency conversion of any kind. Currency is never derived from country, locale, IP, or preference. | `S1` |
 | BR-PM-16 | All provider costs — OpenAI tokens, search queries, email and any other provider — are recorded in USD. | `S1` |
 | BR-PM-17 | COGS and margin are USD. Margin is USD revenue minus USD COGS; both operands are USD by construction. | `S1` |
-| BR-PM-18 | All monetary values are integer cents. No float or fractional numeric is used for money at any layer. | `S1` |
+| BR-PM-18 | Every monetary column is named `*_usd` and uses an exact decimal type (`numeric(p,s)`). Floating-point types (`float`, `real`, `double precision`) are prohibited. Amounts are non-negative. | `S1` |
 
 ---
 

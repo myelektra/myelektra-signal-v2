@@ -17,9 +17,9 @@ Vercel  →  React / Vite / TypeScript SPA
 
 ## Status
 
-**Phase 0 — documentation baseline.** No application code, schema, or migration exists yet. This is
-deliberate: the operating rule is that the documentation baseline is written and reviewed before
-feature implementation starts.
+**Phase 0 — `READY_FOR_APPROVAL`.** The documentation baseline passed its final correctness pass.
+No application code, schema, or migration exists yet: the operating rule is that the baseline is
+written and reviewed before feature implementation starts.
 
 Start with [`docs/README.md`](docs/README.md).
 

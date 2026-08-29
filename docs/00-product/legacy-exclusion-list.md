@@ -84,7 +84,7 @@ Prohibitions that rely on reviewer memory will fail. Automated detection is requ
 | Route inventory | Any route matching a test/debug checkout pattern |
 | Migration review | Any migration referencing a legacy table or column name |
 | Currency scan | Any `IDR`, `amount_idr`, `fx_rate`, `exchange_rate`, `USD_TO_IDR`, or `rupiah` occurrence **outside exclusion documentation**, or defined as a schema field |
-| Schema scan | Any monetary column without `check (currency = 'USD')`, or using a float type |
+| Schema scan | Any monetary column without `check (currency = 'USD')`, not named `*_usd`, or using a floating-point type |
 
 ### R-LC-5 Excluded currency handling `S1`
 

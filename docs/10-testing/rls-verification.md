@@ -53,12 +53,15 @@ For every tenant-owned table `T`, and for tenant A's `CUSTOMER` JWT:
 | 5 | `insert` with `organization_id = <B>` | Rejected |
 | 6 | `update` own row, permitted columns | Succeeds where permitted |
 | 7 | `update` B's row | Affects zero rows |
-| 8 | `update` own row, denied columns (`score`, `role`, `access_state`, `is_verified`, `quantity`) | Rejected |
+| 8 | `update` own row, denied columns (`score`, `role`, `access_state`, `is_verified`, `quantity`, `currency`, `amount_usd`) | Rejected — by column `REVOKE`, **not** by a policy |
 | 9 | `delete` B's row | Affects zero rows |
 | 10 | `delete` own row | Succeeds only where permitted |
 
-Row 8 is the column-level gate and is the one most often forgotten: a policy that permits updating a
-row does not imply every column may be written.
+**Row 8 is not an RLS test.** An RLS policy has no column granularity: it decides whether an `UPDATE`
+may touch a *row*, never which columns of that row are writable. Row 8 therefore verifies the column
+`REVOKE`. It is the row most often written incorrectly, because it sits in the same table as genuine
+policy tests. The assertion is that the `UPDATE` fails *and* fails for the expected reason — a
+permission error from the `REVOKE`, not an error that happens to come from somewhere else.
 
 ### R-RV-4 Both directions `S1`
 
@@ -77,6 +80,26 @@ accidentally asymmetric, which is a real failure mode when policies are written 
 
 The `SUPER_ADMIN` row asserting that `audit_logs` is still unwritable is deliberate: append-only means
 append-only for everyone, including the most privileged role.
+
+### R-RV-5b Column protection and immutability `S1` + `D`
+
+These cannot be tested with policies, because they are not policies. Several need a role that
+**holds** the column privilege, which is the only way to prove the trigger actually works:
+
+| # | Assertion | Mechanism under test |
+| --- | --- | --- |
+| 1 | `authenticated` cannot write `signals.score`, `organization_members.role`, `organizations.access_state`, `signal_evidence.is_verified`, `usage.quantity` | Column `REVOKE` |
+| 2 | A **privileged** role holding the privilege still cannot change `payments.amount_usd`, `payments.currency`, or `payments.paid_at` | `BEFORE UPDATE` trigger |
+| 3 | A privileged role still cannot change a published Signal's `score` or `score_components` | `BEFORE UPDATE` trigger |
+| 4 | `signal_evidence.is_verified` moves `false → true` once and cannot be reversed | Transition trigger |
+| 5 | A non-USD `currency` insert is rejected for **every** role, including the table owner | `CHECK` constraint |
+| 6 | A negative `amount_usd` is rejected on `payments` and on `cost_entries` | `CHECK` constraint |
+| 7 | `UPDATE`/`DELETE` on `audit_logs` and `cost_entries` raises for every role | Append-only trigger |
+| 8 | Protected mutations succeed only through the authorized RPC, and write an audit entry | RPC path |
+
+Rows 2–4 are the ones that fail in a system relying on `REVOKE` alone: any role that legitimately
+holds the privilege can then write the field, which is exactly how an "immutable" column becomes
+mutable the next time an admin feature ships.
 
 ### R-RV-6 Structural assertions `D`
 
@@ -112,7 +135,10 @@ derived from the schema, not maintained by hand, so it cannot drift.
 - [ ] The matrix runs for every tenant-owned table, in both directions, and passes.
 - [ ] Every table under test is seeded for both tenants before assertions run.
 - [ ] Row 8 (column denial) is asserted for `signals.score`, `organization_members.role`,
-      `organizations.access_state`, `signal_evidence.is_verified`, and `usage.quantity`.
+      `organizations.access_state`, `signal_evidence.is_verified`, `usage.quantity`, `currency`, and
+      `amount_usd`, and is attributed to the column `REVOKE`.
+- [ ] All eight assertions in R-RV-5b pass, including the privileged-role trigger tests.
+- [ ] No test in this suite describes a column restriction as an RLS policy.
 - [ ] A no-membership JWT and an `anon` request see zero tenant rows.
 - [ ] All structural assertions in R-RV-6 pass.
 - [ ] The table list is derived from the schema; adding a table without coverage fails CI.

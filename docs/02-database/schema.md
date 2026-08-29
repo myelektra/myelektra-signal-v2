@@ -61,10 +61,15 @@ Two additions are required to satisfy `S1` requirements that the conceptual list
 | --- | --- | --- |
 | INV-1 | Every tenant-owned row has a non-null `organization_id` referencing `organizations`. | `NOT NULL` + `FOREIGN KEY` |
 | INV-2 | A customer cannot read or write another tenant's rows. | RLS — see [rls](rls.md) |
-| INV-3 | A customer cannot change role. | No `UPDATE` policy on `organization_members.role`; RLS |
-| INV-4 | A customer cannot change payment or access state. | Column-level `GRANT` denial + no `UPDATE` policy on the columns |
-| INV-5 | A customer cannot change a final Signal score. | No `UPDATE` policy on `signals` for `CUSTOMER` |
-| INV-6 | A customer cannot mark evidence verified. | No `UPDATE` policy on `signal_evidence.verified_*` for `CUSTOMER` |
+| INV-3 | A customer cannot change role. | Column `REVOKE` + immutability trigger + RPC-only mutation |
+| INV-4 | A customer cannot change payment or access state. | Column `REVOKE` + immutability trigger + RPC-only mutation |
+| INV-5 | A customer cannot change a final Signal score. | No `UPDATE` policy on `signals` **at all** (row-level) + column `REVOKE` + trigger |
+| INV-6 | A customer cannot mark evidence verified. | Column `REVOKE` on the verification columns + trigger + RPC-only mutation |
+
+**RLS does not enforce INV-3 … INV-6.** A policy decides whether a row is visible and whether an
+`UPDATE` may touch it; it cannot make one column of an otherwise-writable row immutable. Where a
+customer may legitimately update a row but not a field inside it, RLS is silent and the protection
+comes from `REVOKE`/`GRANT`, a trigger, or an RPC. The full model is R-DB-6.
 | INV-7 | Admin access is server-authorized. | Edge Function check before any privileged call |
 | INV-8 | Privileged mutations are recorded. | Trigger-maintained `audit_logs`, append-only |
 | INV-9 | Payment provider references are provider-scoped. | Composite uniqueness on `(provider, …)` |
@@ -101,7 +106,7 @@ Two additions are required to satisfy `S1` requirements that the conceptual list
 | `id` | `uuid pk` | |
 | `key` | `text not null unique` | `signal_lite` / `signal_pro` / `signal_elite` — the only thing the browser sends (BR-PM-03) |
 | `display_name` | `text not null` | BR-PK-01 |
-| `price_cents` | `integer not null check (price_cents > 0)` | 1900 / 4900 / 9900 |
+| `price_usd` | `numeric(12,2) not null check (price_usd > 0)` | 19.00 / 49.00 / 99.00 — exact decimal, not float |
 | `currency` | `text not null default 'USD' check (currency = 'USD')` | BR-PK-02 — constrained, not conventional |
 | `billing_interval` | `text not null default 'MONTH'` | BR-PK-03 |
 | `is_active` | `boolean not null default true` | Retire a plan without breaking history |
@@ -184,7 +189,7 @@ A constraint this important must not be defeatable by a code path that forgets t
 | `provider_transaction_id` | `text null` | BR-PM-09 |
 | `provider_subscription_id` | `text null` | BR-PM-09 |
 | `package_id` | `uuid not null → packages.id` | What was bought, resolved server-side |
-| `amount_cents` | `integer not null check (amount_cents > 0)` | Never from the client (BR-PM-03) |
+| `amount_usd` | `numeric(12,2) not null check (amount_usd > 0)` | Never from the client (BR-PM-03) |
 | `currency` | `text not null default 'USD' check (currency='USD')` | BR-PM-02 |
 | `status` | `text not null` | Internal settlement status; mapping from provider status is `X` (BR-SB-04) |
 | `paid_at` | `timestamptz null` | BR-PM-09 |
@@ -229,11 +234,16 @@ the legitimate nulls.
 | `organization_id` | `uuid not null` | INV-1 — attribution to the tenant that caused the spend |
 | `job_id` | `uuid null → signal_jobs.id` | Attribution to the unit of work; null for non-pipeline spend |
 | `provider` | `text not null` | `OPENAI` / `SEARCH` / `EMAIL` / other named provider |
-| `amount_cents` | `integer not null check (amount_cents >= 0)` | **USD cents** — BR-PM-16, BR-PM-18 |
+| `amount_usd` | `numeric(14,6) not null check (amount_usd >= 0)` | **USD** — BR-PM-16, BR-PM-18 |
 | `currency` | `text not null default 'USD' check (currency = 'USD')` | BR-PM-02 — explicit, not implied |
 | `units` | `integer null check (units >= 0)` | Tokens, queries, or messages consumed |
 | `unit_label` | `text null` | What `units` counts |
 | `created_at` | `timestamptz not null default now()` | |
+
+The scale is `numeric(14,6)` rather than `(12,2)` because a single model or search call can cost a
+fraction of a cent. At two decimal places every small call rounds to `0.00`, so COGS silently
+understates itself — an error that stays invisible until margin is compared with the provider
+invoice.
 
 Append-only, like `audit_logs`: `UPDATE` and `DELETE` are revoked and a trigger raises. An editable
 cost history is an editable profit statement. COGS is the sum of these rows for a period; margin is
@@ -241,6 +251,8 @@ USD revenue minus that sum ([currency-and-cost-policy](../00-product/currency-an
 
 No `amount_idr`, `fx_rate`, or `exchange_rate` column exists in this schema, and none may be added
 ([legacy-exclusion-list R-LC-5](../00-product/legacy-exclusion-list.md#r-lc-5-excluded-currency-handling-s1)).
+Every monetary column is named `*_usd`, is an exact `numeric` (never a floating-point type), and is
+paired with a `currency` column constrained to `'USD'`.
 
 **`signal_jobs`** — fields mandated verbatim by BR-JB-02.
 
@@ -331,6 +343,89 @@ No column in this schema is named `transaction_id`, `order_id`, or `subscription
 `provider_` prefix and a sibling `provider` column. This is INV-9/INV-10 expressed as a naming rule
 that a reviewer can check mechanically.
 
+### R-DB-6 What RLS does and does not protect `S1`
+
+An RLS policy answers two questions: **may this role see this row**, and **may this role's `UPDATE`
+touch this row**. It cannot answer a third question — *may this role write this particular column of
+a row it is allowed to update*. A policy has no column granularity.
+
+The consequence is concrete. If a customer is allowed to update `monitoring_profiles.name`, an RLS
+policy that permits that `UPDATE` permits **every** column of the row unless something else stops it.
+Protection of individual fields therefore comes from four other mechanisms, and each protected field
+is assigned one explicitly.
+
+| Mechanism | Protects | Cannot do |
+| --- | --- | --- |
+| **`CHECK` constraint** | Whether a value is representable at all | Restrict by role |
+| **Column `GRANT` / `REVOKE`** | Which columns a role may write | Restrict by row or by prior value |
+| **Trigger** | Whether a *change* is permitted, given the old value | Replace row isolation |
+| **RPC / Edge Function** | Whether an *action* is permitted, with full context | Constrain a direct table write |
+| **RLS policy** | Row visibility and row-level write access | Column granularity |
+| **Audit log** | Nothing — it records, it does not prevent | Prevent anything |
+
+They compose. A single protected field is normally guarded by two or three of them, so that a defect
+in one is caught by another.
+
+### R-DB-7 Protected fields and their enforcement `S1` + `D`
+
+| Table | Field | Constraint | Column `REVOKE` | Trigger | Mutation path |
+| --- | --- | --- | --- | --- | --- |
+| `packages` | `currency` | `check (currency = 'USD')` | from `authenticated`, `anon` | — | RPC, `SUPER_ADMIN` |
+| `packages` | `price_usd` | `check (price_usd > 0)` | from `authenticated`, `anon` | — | RPC, `SUPER_ADMIN`, audited |
+| `payments` | `currency` | `check (currency = 'USD')` | from `authenticated` | immutable once set | Settlement RPC only |
+| `payments` | `amount_usd` | `check (amount_usd > 0)` | from `authenticated` | immutable once set | Settlement RPC only |
+| `payments` | `status`, `paid_at` | `check` on `status` | from `authenticated` | `paid_at` immutable once set | Settlement RPC only |
+| `payments` | `provider_transaction_id` | provider-scoped unique index | from `authenticated` | immutable once set | Settlement RPC only |
+| `cost_entries` | `amount_usd`, `currency` | `check (amount_usd >= 0)`, `check (currency = 'USD')` | `UPDATE`/`DELETE` revoked entirely | append-only trigger | Pipeline insert only |
+| `organizations` | `access_state` | `check` on the five states | from `authenticated` | transition guard | Settlement / admin RPC |
+| `organizations` | `onboarding_state`, `package_id` | `check` / FK | from `authenticated` | — | RPC only |
+| `organization_members` | `role` | `check (role in (…))` | from `authenticated` | immutable without `SUPER_ADMIN` | RPC only |
+| `signals` | `score`, `score_band`, `score_components` | range + key-presence `check` | from `authenticated` | immutable once `published_at` is set | Pipeline only |
+| `signals` | `published_at` | — | from `authenticated` | publication gate (verified evidence required) | Pipeline only |
+| `signal_evidence` | `is_verified`, `verified_by`, `verified_at` | — | from `authenticated` | may only move false → true, once | Verification RPC only |
+| `usage` | `quantity` | `check (quantity >= 0)` | from `authenticated` | monotonic within a period | Pipeline / admin RPC |
+| `audit_logs` | all | — | `UPDATE`/`DELETE` revoked entirely | append-only trigger | Trigger-maintained |
+
+"Immutable once set" means a `BEFORE UPDATE` trigger that raises when the new value differs from the
+old:
+
+```sql
+create or replace function app.assert_immutable() returns trigger
+language plpgsql as $$
+declare col text;
+begin
+  foreach col in array tg_argv loop
+    if to_jsonb(old) ->> col is distinct from to_jsonb(new) ->> col then
+      raise exception 'column % is immutable on %', col, tg_table_name;
+    end if;
+  end loop;
+  return new;
+end $$;
+
+create trigger payments_immutable before update on payments
+  for each row execute function app.assert_immutable(
+    'amount_usd','currency','paid_at','provider_transaction_id','internal_order_id');
+```
+
+The trigger is the layer that actually delivers immutability. The `REVOKE` stops the ordinary client
+path; the trigger stops the privileged path from doing it by accident, and makes the rule survive a
+future policy mistake.
+
+### R-DB-8 Money representation `S1`
+
+| Rule | Enforcement |
+| --- | --- |
+| Every monetary column is named `*_usd` | Naming convention, checked by the schema scan |
+| Every monetary column is paired with a `currency` column constrained to `'USD'` | `check (currency = 'USD')` |
+| Amounts are non-negative | `check (amount_usd >= 0)`, or `> 0` where a zero amount is meaningless |
+| Exact decimal only | `numeric(p,s)`. **`float`, `real`, `double precision`, and `float8` are prohibited** |
+| No IDR, FX, exchange-rate, or conversion column | Absent, and scanned for ([legacy-exclusion-list R-LC-5](../00-product/legacy-exclusion-list.md#r-lc-5-excluded-currency-handling-s1)) |
+
+`numeric` is exact decimal arithmetic and is the correct type for money; the prohibition is on
+**floating-point** types, whose binary representation cannot hold `19.99` exactly. An earlier revision
+of this document said "no fractional numeric", which was wrong — it would have prohibited the very
+type `amount_usd` requires. The rule is: no floating point.
+
 ## Security considerations
 
 - Constraints are the last line of defence. RLS decides *who* may act; constraints decide *what is
@@ -353,6 +448,15 @@ that a reviewer can check mechanically.
 - [ ] Inserting a second `research_runs` row for the same `(organization_id, run_date)` raises.
 - [ ] `packages.limits` is `{}` in the baseline, with a comment pointing at OD-BR-1.
 - [ ] Writing a `score` of 101 or -1 is rejected.
+- [ ] Every monetary column is named `*_usd`, is `numeric`, and is paired with a `currency` column
+      constrained to `'USD'`.
+- [ ] No monetary column uses `float`, `real`, `double precision`, or `float8`.
+- [ ] A negative `amount_usd` is rejected on `payments` and on `cost_entries`.
+- [ ] Updating `payments.amount_usd`, `payments.currency`, or `payments.paid_at` raises, even for a
+      role that holds column privileges.
+- [ ] Updating a published Signal's `score` raises.
+- [ ] Flipping `signal_evidence.is_verified` from true back to false raises.
+- [ ] `UPDATE`/`DELETE` on `audit_logs` and `cost_entries` raises for every role.
 
 ## Related skills
 

@@ -38,7 +38,7 @@ currency selection by anyone — customer, admin, or code.
 | Customer payments | USD | `payments.currency` with `check (currency = 'USD')` |
 | Subscriptions | USD | Inherited from `packages`; no subscription-level currency column exists |
 | PayPal orders, captures, subscriptions, refunds, disputes | USD | Created server-side in USD only; the provider account is USD |
-| OpenAI token cost | USD | Recorded in `cost_entries.amount_cents` (USD) |
+| OpenAI token cost | USD | Recorded in `cost_entries.amount_usd` |
 | Search provider cost | USD | Same |
 | Email / delivery provider cost | USD | Same |
 | Any other provider cost | USD | Same — the column permits no other value |
@@ -48,8 +48,16 @@ currency selection by anyone — customer, admin, or code.
 Every one of these is enforced by a **`check` constraint**, not by a code default. A default can be
 forgotten by a new code path; a constraint cannot be satisfied by a wrong value.
 
-Amounts are **integer cents**. No float or numeric-with-fraction is used for money anywhere in the
-schema, at any layer, including cost telemetry.
+Amounts are stored in columns named **`amount_usd`** (or `price_usd` for the catalog) using an exact
+decimal type, `numeric(p,s)`. **Floating-point types are prohibited** — `float`, `real`, and `double
+precision` cannot represent `19.99` exactly in binary, and the error accumulates.
+
+An earlier revision of this document said "no fractional numeric". That was wrong: it would have
+prohibited the exact type `amount_usd` requires. The rule is **no floating point**, not "no decimals".
+
+Scale is chosen per surface: `numeric(12,2)` for prices and payments, where a cent is the smallest
+real unit; `numeric(14,6)` for `cost_entries`, because a single model or search call can cost a
+fraction of a cent and would otherwise round to `0.00` and silently understate COGS.
 
 ### R-CU-2 Prohibited constructs `S1`
 
@@ -118,7 +126,7 @@ Every paid provider call is recorded as a cost entry in USD cents:
 | Field | Rule |
 | --- | --- |
 | `provider` | `OPENAI`, `SEARCH`, `EMAIL`, or another named provider |
-| `amount_cents` | Integer USD cents, `check (amount_cents >= 0)` |
+| `amount_usd` | `numeric(14,6)`, USD, `check (amount_usd >= 0)` |
 | `currency` | `check (currency = 'USD')` — present so the constraint is explicit, not implied |
 | `organization_id` | Attribution to the tenant that caused the spend |
 | `job_id` | Attribution to the unit of work |
@@ -212,7 +220,8 @@ The prohibition list is enforced by a scan, not by review:
 | Source scan | Any `mayar`, `midtrans`, `convex` reference outside exclusion documentation |
 | Dependency scan | Any package matching those names, transitively included |
 | Schema scan | Any monetary column without `check (currency = 'USD')` |
-| Schema scan | Any monetary column using a float or fractional numeric type |
+| Schema scan | Any monetary column using a floating-point type (`float`, `real`, `double precision`) |
+| Schema scan | Any monetary column not named `*_usd` |
 
 A prohibition enforced only by review will eventually be broken by someone who never read this
 document.
@@ -239,8 +248,8 @@ change. The two are enforced separately for exactly that reason.
   and cron-only dispatch are the controls.
 - **`check (currency = 'USD')` is an integrity control.** It makes a currency-override attack
   unrepresentable at the storage layer, independent of any code review.
-- **Integer cents, never floats.** Float money accumulates rounding error that eventually becomes a
-  reconciliation failure nobody can explain.
+- **Exact decimal, never floating point.** Binary floats cannot hold `19.99` exactly, and the error
+  accumulates into a reconciliation failure nobody can explain.
 - **Currency is never derived from context** (R-CU-3). Deriving it from locale or IP means a crafted
   request could influence the unit an amount is interpreted in.
 - **Append-only cost entries** make margin auditable. An editable cost history is an editable profit
@@ -253,7 +262,9 @@ change. The two are enforced separately for exactly that reason.
 ## Acceptance criteria
 
 - [ ] Every monetary column in the schema carries `check (currency = 'USD')`.
-- [ ] No monetary column uses a float or fractional numeric type.
+- [ ] No monetary column uses a floating-point type; all are exact `numeric(p,s)`.
+- [ ] Every monetary column is named `*_usd` and paired with a `currency` column constrained to `'USD'`.
+- [ ] A negative `amount_usd` is rejected.
 - [ ] A non-USD insert into `packages`, `payments`, or `cost_entries` is rejected.
 - [ ] A checkout request containing `currency` is rejected with `400` and audited.
 - [ ] `IDR`, `amount_idr`, `fx_rate`, `exchange_rate`, `USD_TO_IDR`, and `rupiah` occur **only**
@@ -261,7 +272,7 @@ change. The two are enforced separately for exactly that reason.
 - [ ] No non-markdown file in the repository contains any of them.
 - [ ] No `mayar`, `midtrans`, or `convex` reference exists outside exclusion documentation.
 - [ ] No code path derives currency from country, locale, IP, or preference.
-- [ ] Every paid provider call records `provider`, `amount_cents`, `organization_id`, and `job_id`.
+- [ ] Every paid provider call records `provider`, `amount_usd`, `currency`, `organization_id`, and `job_id`.
 - [ ] Admin Economics reports revenue, COGS, and margin per organization per period, all in USD.
 - [ ] Exceeding a per-job budget fails that job only; exceeding the run ceiling yields `PARTIAL` with
       a recorded reason surfaced in Action Required.

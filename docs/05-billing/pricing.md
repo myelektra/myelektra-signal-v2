@@ -33,7 +33,8 @@ what a plan *includes* ([entitlements](entitlements.md)), the single-currency ru
 | `signal_pro` | Signal Pro | $49.00 | USD | monthly |
 | `signal_elite` | Signal Elite | $99.00 | USD | monthly |
 
-Stored as integer cents: `1900`, `4900`, `9900`. No float money, at any layer.
+Stored in `packages.price_usd` as exact decimal: `19.00`, `49.00`, `99.00`, type `numeric(12,2)`.
+No floating-point money, at any layer.
 
 There are exactly three plans. A fourth plan is a product decision, not a configuration change.
 
@@ -46,7 +47,7 @@ see [currency-and-cost-policy R-CU-1…R-CU-3](../00-product/currency-and-cost-p
 ### R-PR-3 The database is the price authority `S1`
 
 ```
-packages.key → packages.price_cents → charged amount
+packages.key → packages.price_usd → charged amount
 ```
 
 | Rule | Why |
@@ -107,7 +108,7 @@ something nobody decided, and it would look authoritative the moment it shipped.
 | 4 | The PayPal-side plan is updated to match, and the two are verified to agree before the change is considered complete. |
 | 5 | The change is visible in admin **Packages** with its effective time and actor. |
 
-Step 4 matters: `packages.price_cents` and the provider-side plan are two representations of one
+Step 4 matters: `packages.price_usd` and the provider-side plan are two representations of one
 fact. A change applied to only one produces charges that contradict the catalog.
 
 ### R-PR-7 Relationship to cost `D`
@@ -136,9 +137,9 @@ them here.
 
 - [ ] `packages` contains exactly the three rows in R-PR-1, with the stated cent values.
 - [ ] `packages.currency` carries `check (currency = 'USD')`; a non-USD insert is rejected.
-- [ ] No monetary value is stored as a float anywhere in the schema.
+- [ ] No monetary value uses a floating-point type anywhere in the schema; all are exact `numeric`.
 - [ ] A checkout request containing `amount`, `price`, or `currency` is rejected with `400` and audited.
-- [ ] The charged amount equals `packages.price_cents` for each of the three plan keys, asserted by test.
+- [ ] The charged amount equals `packages.price_usd` for each of the three plan keys, asserted by test.
 - [ ] No price literal appears in frontend source.
 - [ ] `packages.limits` is `{}` in the baseline, with a comment referencing B-2.
 - [ ] A price change writes an audit entry with before and after values.

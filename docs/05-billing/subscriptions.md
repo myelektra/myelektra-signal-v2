@@ -78,7 +78,7 @@ approved.
 
 Subscription state is server-owned. Customers cannot set or change it (BR-AC-02). Enforced by RLS
 denial and column `GRANT` denial on the whole table
-([rls R-RL-4](../02-database/rls.md#r-rl-4-restricted-columns-s1)).
+([rls R-RL-4](../02-database/rls.md#r-rl-4-column-protection-is-not-rls-s1)).
 
 ### R-SB-7 Plan change `X`
 

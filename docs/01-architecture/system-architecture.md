@@ -68,7 +68,7 @@ Dependencies point inward. Violations are architecture bugs, not style issues.
 | Boundary | Crossing | Rule |
 | --- | --- | --- |
 | Browser → Vercel | Static assets | Nothing sensitive is in the bundle. |
-| Browser → Supabase | JWT + RLS | Client is untrusted for scope, price, role, state. RLS is the gate. |
+| Browser → Supabase | JWT + RLS | Client is untrusted for scope, price, role, and state. RLS is the gate for **rows**; column-level fields (`price_usd`, `role`, `access_state`, `score`) are guarded by `REVOKE`, triggers, and `CHECK` constraints — see [schema R-DB-6](../02-database/schema.md#r-db-6-what-rls-does-and-does-not-protect-s1). |
 | Browser → Edge Function | HTTPS + JWT | Function re-authorizes server-side; it never trusts the route that called it. |
 | PayPal → Edge Function | Webhook | Signature verification + replay protection before any state change. USD only; no currency is taken from the provider or the client. |
 | Edge Function → cost ledger | USD cost entries | Every paid provider call is recorded in USD cents, attributed to an organization and a job. |

@@ -49,7 +49,7 @@ representable. No exchange rate is read from the provider and none is stored.
 ```
 Browser sends plan key only                    ("signal_pro")
   ↓
-Edge Function resolves authoritative package    packages.key → price_cents, currency, provider_plan_id
+Edge Function resolves authoritative package    packages.key → price_usd, currency, provider_plan_id
   ↓
 Edge Function creates PayPal order/subscription server-side
   ↓
@@ -207,7 +207,7 @@ Live cutover is a controlled, documented event, not a flag flip:
 
 - [ ] A checkout request containing `amount`, `currency`, `role`, `status`, or a foreign
       `organization_id` is rejected with `400` and audited.
-- [ ] The charged amount always equals `packages.price_cents` for the resolved key, for all three
+- [ ] The charged amount always equals `packages.price_usd` for the resolved key, for all three
       plans.
 - [ ] An unverified webhook (bad signature) causes no state change and is audited.
 - [ ] The same webhook delivered twice produces exactly one `payments` row and one entitlement change.

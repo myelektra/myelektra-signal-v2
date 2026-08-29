@@ -84,9 +84,18 @@ the `SCORE EXPLANATION` section can show the six components and the customer can
 The frontend never computes, recomputes, adjusts, or re-derives a score or band (BR-SC-12). It reads
 `score`, `score_band`, and `score_components` and renders them. Enforced by:
 
-- RLS: no `UPDATE` on `signals.score*` for any client role.
-- Import-boundary lint: the SPA cannot import the domain-core scoring module.
-- Test: a fixture with known components asserts the rendered value equals the stored value.
+- **No `UPDATE` policy on `signals` at all** for any client role — row-level denial, so no column of
+  a Signal is writable by a customer.
+- **Column `REVOKE`** on `score`, `score_band`, `score_components`, and `published_at` for
+  `authenticated`, so the fields are not writable even where a row is.
+- **A `BEFORE UPDATE` trigger** that raises if a published Signal's score or components change, which
+  also stops a privileged writer from doing it by accident.
+- **A `CHECK` constraint** rejecting a score outside 0–100 and requiring all six component keys.
+- **Import-boundary lint**, so the SPA cannot import the domain-core scoring module.
+- **Test**: a fixture with known components asserts the rendered value equals the stored value.
+
+Note that the trigger and the `REVOKE`, not RLS, are what make the score immutable. An RLS policy has
+no column granularity; see [schema R-DB-6](../02-database/schema.md#r-db-6-what-rls-does-and-does-not-protect-s1).
 
 A client that could recompute a score could also display a different one than the server holds,
 which is how a product ends up arguing with its own customer about a number.
@@ -115,8 +124,9 @@ module is the heart of the signal domain. It is recorded as **B-3**.
 
 ## Security considerations
 
-- Score immutability and the RLS denial together mean **a customer cannot inflate their own Signals**.
-  Any path that permits it is a privilege escalation with direct commercial consequence.
+- Score immutability comes from the column `REVOKE` and the trigger, reinforced by the absence of any
+  customer `UPDATE` policy on `signals`. Together they mean **a customer cannot inflate their own
+  Signals**. Any path that permits it is a privilege escalation with direct commercial consequence.
 - Determinism is a security property here: an attacker who can influence a score input can influence
   what a customer is told to act on. Keeping the arithmetic pure and its inputs validated
   ([validation](validation.md)) limits that surface.
@@ -130,7 +140,10 @@ module is the heart of the signal domain. It is recorded as **B-3**.
 - [ ] A Signal missing any of the six components cannot be persisted.
 - [ ] Identical inputs produce identical scores across repeated runs, asserted by test.
 - [ ] The SPA cannot import the scoring module — enforced by lint, verified by a failing-build test.
-- [ ] A customer `UPDATE` on `signals.score` is denied.
+- [ ] A customer `UPDATE` on `signals.score` is denied, and the denial is attributed to the column
+      `REVOKE` rather than to an RLS policy.
+- [ ] A privileged role holding column privileges still cannot change a published Signal's score; the
+      trigger raises.
 - [ ] The rendered `SCORE EXPLANATION` matches the stored components exactly.
 
 ## Related skills

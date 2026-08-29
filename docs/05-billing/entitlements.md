@@ -70,7 +70,7 @@ to Signals already delivered. That is a visible customer-facing decision and it 
 
 The mechanism is designed: `usage` counters, unique per `(organization_id, period_start, metric)`,
 write-denied to clients so a customer cannot reset their own counter
-([rls R-RL-4](../02-database/rls.md#r-rl-4-restricted-columns-s1)). The **metric list is not
+([rls R-RL-4](../02-database/rls.md#r-rl-4-column-protection-is-not-rls-s1)). The **metric list is not
 invented**. The `packages.limits` column exists and is `{}` in the baseline.
 
 This is the clearest example in the documentation set of a mechanism being specified while its policy

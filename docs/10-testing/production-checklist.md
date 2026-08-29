@@ -97,7 +97,14 @@ stopping new checkouts, and that action must have been practised.
 
 ## Current state
 
-**Not production ready. No phase beyond Phase 0 documentation has begun.**
+**Phase 0 status: `READY_FOR_APPROVAL`.**
+
+The documentation baseline passed its final correctness pass, including the correction that RLS is
+row-level and cannot protect individual columns — column protection is delivered by `CHECK`
+constraints, column `REVOKE`, immutability triggers, and server-side RPCs.
+
+**Not production ready**, and Phase 0 approval does not change that: no code, schema, or migration
+exists, and five blockers remain.
 
 The honest summary:
 

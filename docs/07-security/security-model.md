@@ -33,7 +33,7 @@ check that cannot be run is documented as a limitation rather than silently skip
 | 5 | No public test/debug payment endpoint | No such route exists in any environment | Route inventory assertion | Gate |
 | 6 | No client-controlled tenant scope | Scope derived from JWT; supplied ids validated against it | Tenant-isolation tests | Gate |
 | 7 | No client-controlled price | Price read from `packages` server-side | Checkout contract test | Gate |
-| 8 | No client-controlled access state | Column `GRANT` denial + no RLS `UPDATE` policy | RLS verification | Gate |
+| 8 | No client-controlled access state | Column `REVOKE` + immutability trigger + RPC-only mutation | RLS verification + trigger tests | Gate |
 | 9 | No cross-tenant reads | RLS deny-by-default + per-table policies | RLS verification, both directions | Gate |
 | 10 | No cross-tenant writes | Same as above, write policies | RLS verification | Gate |
 | 11 | Webhook replay protection | `unique (provider, provider_event_id)` + timestamp window | Replay test, sequential and concurrent | Gate |
@@ -57,14 +57,25 @@ check that cannot be run is documented as a limitation rather than silently skip
 | Layer | Question it answers | Failure mode if absent |
 | --- | --- | --- |
 | SPA route guard | What should we render? | Confusing UI. **Not** a security failure. |
-| Edge Function authorization | May this identity perform this action? | Privileged action by any authenticated user |
-| RLS | Which rows may this JWT touch? | Cross-tenant data access |
-| Column `GRANT` | Which fields may this role write? | Escalation via a permitted row update |
-| Constraints | Is this state representable at all? | Invalid data that no code path intended |
+| Edge Function / RPC authorization | May this identity perform this action? | Privileged action by any authenticated user |
+| RLS | Which **rows** may this JWT touch? | Cross-tenant data access |
+| Column `REVOKE` / `GRANT` | Which **fields** may this role write? | Escalation via a permitted row update |
+| `BEFORE UPDATE` trigger | May this field change at all, given its old value? | A privileged writer changing an immutable field |
+| `CHECK` constraint | Is this value representable at all? | Invalid data that no code path intended |
 | Audit log | What happened, and who did it? | Unattributable privileged change |
 
-Each layer is necessary. The design intent is that a defect in one layer is caught by another: a
-missing RLS policy still meets a column `GRANT` denial; a wrong `GRANT` still meets a constraint.
+Each layer is necessary, and **they are not interchangeable**. The distinction that matters most:
+
+> **RLS is row-level.** It decides whether a row is visible and whether an `UPDATE` may touch it. It
+> has no column granularity and cannot make a field immutable. Any claim that an RLS policy protects
+> `currency`, `amount_usd`, `status`, `score`, or `access_state` is wrong. Those are protected by
+> column `REVOKE`, triggers, and `CHECK` constraints — see
+> [schema R-DB-6](../02-database/schema.md#r-db-6-what-rls-does-and-does-not-protect-s1) and
+> [schema R-DB-7](../02-database/schema.md#r-db-7-protected-fields-and-their-enforcement-s1--d).
+
+The design intent is that a defect in one layer is caught by another: a missing RLS policy still
+meets a column `REVOKE`; a wrong `GRANT` still meets a trigger; a bypassed trigger still meets a
+constraint.
 
 ### R-SM-4 Input trust rules `S1`
 
@@ -137,6 +148,8 @@ someone who never read this document.
 - [ ] The secret scan runs on build artifacts, not only on source.
 - [ ] The import-boundary lint fails the build if the SPA imports a domain-core or adapter module.
 - [ ] The prohibition scan in R-SM-6 runs in CI and fails on any hit.
+- [ ] Every protected financial column is guarded by a `CHECK` constraint, a column `REVOKE`, and —
+      where it is immutable — a trigger, and no document claims an RLS policy provides that guard.
 - [ ] A full sandbox checkout produces no log line containing a secret, token, or raw auth header.
 - [ ] The RLS verification matrix passes for every tenant-owned table in both directions.
 - [ ] No production-readiness claim is made while any R-SM-1 row is unverified.

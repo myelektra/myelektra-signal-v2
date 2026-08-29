@@ -37,10 +37,17 @@ navigated to cannot be checked by the customer, which defeats the purpose of sho
 
 Customers cannot mark evidence verified (BR-EV-03). Enforced by:
 
-- Column-level `GRANT` denial on `is_verified`, `verified_by`, `verified_at`
-  ([rls](../02-database/rls.md#r-rl-4-restricted-columns-s1)).
-- No `UPDATE` policy on `signal_evidence` for `CUSTOMER`.
-- Verification performed only by the pipeline or by an authorized admin action, both audited.
+- **Column `REVOKE`** on `is_verified`, `verified_by`, and `verified_at` for `authenticated`
+  ([rls R-RL-4](../02-database/rls.md#r-rl-4-column-protection-is-not-rls-s1)).
+- **A trigger** permitting only a one-way `false → true` transition, set once, so verification cannot
+  be silently reversed — and cannot be reversed by a privileged writer either.
+- **No customer `UPDATE` policy** on `signal_evidence` at all, which is the row-level backstop.
+- **Verification only through a `SECURITY DEFINER` RPC or Edge Function** that authorizes explicitly
+  and writes the audit entry.
+
+These are deliberately not described as RLS. An RLS policy has no column granularity: if a customer
+could update any column of an evidence row, the policy alone would not protect `is_verified`. See
+[schema R-DB-6](../02-database/schema.md#r-db-6-what-rls-does-and-does-not-protect-s1).
 
 Every verification records who and when (BR-EV-04). An anonymous verification is not an
 accountability record.
@@ -97,7 +104,9 @@ by the absence of a constraint.
 ## Acceptance criteria
 
 - [ ] A Signal with no verified evidence cannot be published — asserted by a database-level test.
-- [ ] A customer `UPDATE` on `signal_evidence.is_verified` is denied for their own rows.
+- [ ] A customer `UPDATE` on `signal_evidence.is_verified` is denied for their own rows, via the
+      column `REVOKE`.
+- [ ] Flipping `is_verified` from `true` back to `false` raises, even for a privileged role.
 - [ ] Every verification writes `verified_by` and `verified_at`, and produces an audit entry.
 - [ ] A missing source publication date is stored null and rendered as "date not available".
 - [ ] `source_url` containing a non-`http(s)` scheme is not rendered as a link.

@@ -28,7 +28,11 @@ authorization flow ([authentication-authorization](../03-auth/authentication-aut
    between "we wrote policies for the paths we thought of" and "unlisted paths are closed".
 2. **`FORCE ROW LEVEL SECURITY`** on tables where the table owner should not bypass either, so that
    a migration run as owner cannot silently read across tenants.
-3. **Two enforcement points.** RLS governs *data access*. Edge Functions govern *actions*. A
+3. **RLS is row-level only.** A policy decides whether a role may see a row and whether its `UPDATE`
+   may touch that row. **It has no column granularity** and cannot make a field immutable. Column
+   protection comes from `REVOKE`/`GRANT`, `CHECK` constraints, triggers, and server-side RPCs. See
+   R-RL-4 and [schema R-DB-6](schema.md#r-db-6-what-rls-does-and-does-not-protect-s1).
+4. **Two authorization points.** RLS governs *data access*. Edge Functions govern *actions*. A
    function that performs a privileged action must authorize explicitly; it cannot rely on RLS to
    have done it, because it runs with a service-scoped role that bypasses RLS by design.
 
@@ -97,14 +101,33 @@ Non-negotiable details:
 | `payment_events` | — | — | — | — | read | write |
 | `cost_entries` | — | — | — | — | read | insert |
 
-The `—` cells in the CUSTOMER columns for `signals`, `signal_evidence`, `payments`, `subscriptions`,
-`usage`, and `organization_members` are the mechanical expression of BR-SC-12, BR-EV-03, BR-AC-02,
-and BR-RB-02. They are enforced by *not writing a policy*, which is the safest form of denial.
+The `—` cells in the CUSTOMER `update` column for `signals`, `payments`, `subscriptions`, and
+`usage` are enforced by *not writing an `UPDATE` policy at all*, which denies the whole row. That is
+the safest form of denial, and it is sufficient **only because customers have no legitimate reason to
+update those rows**.
 
-### R-RL-4 Restricted columns `S1`
+It is not sufficient for `signal_evidence` or `organization_members`, and this is the important
+distinction: a customer may legitimately need to write one column of a row while being forbidden from
+writing another column of the same row. **An RLS policy cannot express that.** Where it applies, the
+row-level denial is paired with the column controls in R-RL-4.
 
-Absence of an `UPDATE` policy on a table is coarse. Where a customer legitimately updates a row but
-must not touch specific columns, column-level `GRANT` is used as a second gate:
+### R-RL-4 Column protection is not RLS `S1`
+
+**An RLS policy cannot protect a column.** If a policy permits a customer to `UPDATE` a row, it
+permits every column of that row unless another mechanism stops it. Protected fields are guarded by
+three other layers, assigned per field in
+[schema R-DB-7](schema.md#r-db-7-protected-fields-and-their-enforcement-s1--d):
+
+| Layer | What it stops |
+| --- | --- |
+| Column `REVOKE` / `GRANT` | The ordinary client path writing the field at all |
+| `BEFORE UPDATE` trigger | The privileged path changing it by accident, and any future policy mistake |
+| `CHECK` constraint | An invalid value being representable — e.g. a currency other than `'USD'`, or a negative amount |
+
+Mutations of protected fields go through `SECURITY DEFINER` RPCs or Edge Functions that authorize
+explicitly and write the audit entry. They are never direct table writes.
+
+Columns revoked from `authenticated`:
 
 | Table | Column denied to `authenticated` | Rule |
 | --- | --- | --- |
@@ -121,6 +144,11 @@ must not touch specific columns, column-level `GRANT` is used as a second gate:
 Implementation: `revoke update on table … from authenticated`, then `grant update (col_a, col_b)`
 for exactly the columns the customer owns. This inverts the default from "everything except the
 dangerous ones" to "nothing except the safe ones".
+
+The `REVOKE` is necessary but **not sufficient**. A role that does hold the privilege — a service
+role, a migration, a future admin RPC — can still write the column, so every field marked immutable
+in R-DB-7 also carries a trigger. And `currency` is protected by a `CHECK` constraint as well, so
+that even a fully privileged writer cannot store a non-USD value.
 
 ### R-RL-5 Service role `S1`
 
@@ -166,6 +194,11 @@ product are the public homepage's static plan catalog, which is served from the 
       verified per table by [rls-verification](../10-testing/rls-verification.md).
 - [ ] A `CUSTOMER` cannot update `signals.score`, `organization_members.role`,
       `organizations.access_state`, or `signal_evidence.is_verified`, even for their own rows.
+- [ ] Each of those denials is attributed to the correct mechanism — column `REVOKE` or trigger — and
+      is **not** described as an RLS policy.
+- [ ] A privileged role that holds column privileges still cannot change an immutable field; the
+      trigger raises.
+- [ ] A non-USD `currency` value cannot be written by any role, including the table owner.
 - [ ] `grant`/`revoke` state is asserted by a test, not only by inspection.
 
 ## Related skills
