@@ -13,7 +13,7 @@ code, schema, or migration exists yet.
 | [00-product/business-rules.md](00-product/business-rules.md) | The normative rule register, with provenance on every rule. |
 | [00-product/assumptions.md](00-product/assumptions.md) | Provisional positions taken without a fully authorizing source. **None is approved by default.** |
 | [00-product/open-decisions.md](00-product/open-decisions.md) | Everything unresolved, with blocking status. |
-| [01-architecture/legacy-carryover-decisions.md](01-architecture/legacy-carryover-decisions.md) | What is deliberately not carried over. |
+| [00-product/legacy-exclusion-list.md](00-product/legacy-exclusion-list.md) | What is deliberately not carried over. |
 
 ## Provenance
 
@@ -53,6 +53,8 @@ The four registers are distinct and an item lives in exactly one of them:
 | [forensic-audit.md](00-product/forensic-audit.md) | The audit of record and the evidence behind its status |
 | [legacy-audit-gap-register.md](00-product/legacy-audit-gap-register.md) | Authoritative status of all 20 mandated audit targets |
 | [assumptions.md](00-product/assumptions.md) | Provisional positions, their invalidation triggers, and approval status |
+| [currency-and-cost-policy.md](00-product/currency-and-cost-policy.md) | **USD everywhere** — every money-bearing surface, and the prohibited constructs |
+| [legacy-exclusion-list.md](00-product/legacy-exclusion-list.md) | Every exclusion: legacy platforms, payment providers, and currency handling |
 | [open-decisions.md](00-product/open-decisions.md) | Blockers, pending decisions, and the assumptions queue |
 
 ### 01-architecture
@@ -63,7 +65,7 @@ The four registers are distinct and an item lives in exactly one of them:
 | [frontend.md](01-architecture/frontend.md) | SPA responsibilities and limits |
 | [backend.md](01-architecture/backend.md) | Edge Functions, layering, the pure domain core |
 | [deployment.md](01-architecture/deployment.md) | Environments, release order, rollback |
-| [legacy-carryover-decisions.md](01-architecture/legacy-carryover-decisions.md) | What is not carried over, and how that is enforced |
+| [legacy-exclusion-list.md](00-product/legacy-exclusion-list.md) | Exclusions and their automated detection (moved to `00-product/`) |
 
 ### 02-database
 
@@ -95,7 +97,7 @@ The four registers are distinct and an item lives in exactly one of them:
 | Document | Contents |
 | --- | --- |
 | [paypal.md](05-billing/paypal.md) | Checkout, webhooks, replay protection, settlement |
-| [currency-and-cost-policy.md](05-billing/currency-and-cost-policy.md) | USD-only rules, and the cost-control mechanism with its numbers withheld |
+| [pricing.md](05-billing/pricing.md) | The catalog, price authority, display rules, and what is deliberately undefined |
 | [subscriptions.md](05-billing/subscriptions.md) | Lifecycle, and which behaviours remain undefined |
 | [entitlements.md](05-billing/entitlements.md) | Derivation, enforcement, and the undecided quotas |
 | [reconciliation.md](05-billing/reconciliation.md) | Converging with provider truth; escalate, don't auto-reverse |
