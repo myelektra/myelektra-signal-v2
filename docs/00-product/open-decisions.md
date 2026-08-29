@@ -16,6 +16,11 @@ approval.
 - `S1` Strategic brief — the instruction to use GitHub Issues/PRs for unresolved architecture,
   security, and contract decisions, and the operating rule to always state what was not implemented
   and what the known limitations are.
+- Owner instruction (2026-08-29) — leave the legacy-dependent items blocked; **do not** declare the
+  legacy repository unrecoverable; continue all work that does not depend on it.
+- [legacy-audit-gap-register](legacy-audit-gap-register.md) — the authoritative status of the 20
+  mandated audit targets.
+- [assumptions](assumptions.md) — provisional positions taken without a fully authorizing source.
 - [forensic-audit](../00-product/forensic-audit.md) — why most `X` items exist.
 - [business-rules](../00-product/business-rules.md) — the `X` and `D` items consolidated here.
 
@@ -36,7 +41,7 @@ approval.
 
 | ID | Blocker | Blocks | Needs |
 | --- | --- | --- | --- |
-| **B-1** | **The legacy repository `/home/user/myelektra-signal-saas` is absent**, and `myelektra/myelektra-signal-saas` does not resolve on GitHub. Verified this session: `ls /home/user` shows only `myelektra-signal-v2`; `find / -iname "*myelektra*"` returns one hit; `gh repo view` returns `Could not resolve to a Repository`. | The forensic audit (Phase 0 deliverable 1), and every `X` item below. Also Phase 5's Clean Clay design system. | The repository, a read-only export, or written confirmation it is unrecoverable. |
+| **B-1** | **The legacy repository `/home/user/myelektra-signal-saas` is absent**, and `myelektra/myelektra-signal-saas` does not resolve on GitHub. Verified this session: `ls /home/user` shows only `myelektra-signal-v2`; `find / -iname "*myelektra*"` returns one hit; `gh repo view` returns `Could not resolve to a Repository`. | The forensic audit (Phase 0 deliverable 1), and every `X` item below. Also Phase 5's Clean Clay design system. | The repository or a read-only export. **Owner decision: leave blocked; the source is unresolved, NOT unrecoverable** ([assumption A-02](assumptions.md)). |
 | **B-2** | Package quotas and entitlements are undefined. | Schema `packages.limits`, checkout plan resolution, the customer dashboard's usage surfaces, quota enforcement tests. | A product decision. Must not be invented. |
 | **B-3** | Signal type taxonomy and score-component definitions are undefined. | The scoring module — the core of Phase 3. | A product decision. |
 | **B-4** | Deduplication identity and material-update semantics are undefined. | The deduplication stage and the Signal uniqueness constraint. | A product decision. |
@@ -129,8 +134,45 @@ These cannot be proposed responsibly without a source. Each is a question, not a
 1. **B-1** — unblock the source. Everything else tagged `X` may already have an answer there.
 2. **OD-RB-1** — a single decision that unblocks the RLS matrix and the admin control plane.
 3. **B-2 / B-3 / B-4** — the three product decisions that unblock Phase 3.
-4. **OD-PP-1** — verifiable independently by reading provider documentation; unblocks Phase 7.
-5. The `D` items — batchable into one approval pass; none requires research.
+4. **OD-CO-2** — the cost ceilings. Verifiable without the legacy source, and a production daily run
+   is not safe without them.
+5. **OD-PP-1** — verifiable independently by reading provider documentation; unblocks Phase 7.
+6. The `D` items and the A-series assumptions — batchable into one approval pass; none requires
+   research.
+
+## Provisional assumptions requiring approval
+
+Positions taken to let design work proceed without a fully authorizing source. Full detail, including
+what each affects and what would invalidate it, is in [assumptions](assumptions.md). **None is
+approved by default, and none may be implemented before approval.**
+
+| ID | Assumption | Type |
+| --- | --- | --- |
+| A-01 | The provisional product source of truth is the strategic brief plus this v2 baseline. **No legacy PRD exists in this workspace and none has been read.** | `X` |
+| A-02 | The legacy source is unresolved, **not** unrecoverable. No permanence determination has been made. | `X` |
+| A-03 | Monthly billing uses PayPal subscriptions rather than repeated one-time orders. Verify against provider docs (OD-PP-1). | `D` |
+| A-04 | All cron schedules run in UTC. | `D` |
+| A-05 | The organization, not the user, is the billing subject and holder of access state. | `D` |
+| A-06 | A user may belong to multiple organizations (same subject as OD-TI-2). | `D` |
+| A-07 | `packages` is the sole authority for the amount charged. | `D` |
+| A-08 | Cost policy is enforced by mechanism; **no numeric ceiling is assumed** (OD-CO-2). | `D` |
+| A-09 | `score_components` is validated to contain exactly the six briefed keys (same subject as OD-DB-1). | `D` |
+| A-10 | Cross-tenant attempts return `404`, not `403`, to avoid an existence oracle. | `D` |
+| A-11 | Failed privileged attempts are audited as well as successful ones. | `D` |
+| A-12 | Repository layout is `apps/web`, `packages/domain`, `supabase/functions` (same subject as OD-SA-1). | `D` |
+| A-13 | The daily run is drained by a separate worker invocation (same subject as OD-JB-2). | `D` |
+| A-14 | The eight briefed UI states are the complete set; no ninth is invented. | `D` |
+
+## Additional decisions raised this cycle
+
+| ID | Question or proposal | Raised in | Type |
+| --- | --- | --- | --- |
+| OD-GAP-1 | If the legacy source never arrives, re-specify the `BLOCKED` targets as new product decisions. A product-owner decision; not taken. | [legacy-audit-gap-register.md](legacy-audit-gap-register.md) | `X` |
+| OD-CU-1 | Whether to ever display a non-USD estimate, and how it would be labelled. | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `D` |
+| OD-CO-2 | The numeric cost ceilings: per-job token budget, per-organization daily ceiling, per-run ceiling, per-candidate call limit. **Blocks a safe production daily run.** | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `X` |
+| OD-CO-3 | Provider unit costs, verified against current provider pricing. | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `X` |
+| OD-CO-4 | Whether a ceiling breach pages an operator or only queues an Action Required item. | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `D` |
+| OD-CO-5 | Whether cost telemetry is retained per call or aggregated per job. | [currency-and-cost-policy.md](../05-billing/currency-and-cost-policy.md) | `D` |
 
 ## Appendix — document-local open decisions
 

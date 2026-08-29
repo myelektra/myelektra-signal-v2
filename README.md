@@ -30,7 +30,14 @@ present in this workspace**, and `myelektra/myelektra-signal-saas` does not reso
 audit therefore could not be performed, and every requirement in `docs/**` is tagged by provenance so
 that a reader can always tell a briefed rule from an unknown one.
 
-Details, evidence, and the full gap register: [`docs/00-product/forensic-audit.md`](docs/00-product/forensic-audit.md).
+The source is **unresolved, not unrecoverable** — no permanence determination has been made.
+
+| | |
+| --- | --- |
+| Audit of record | [`docs/00-product/forensic-audit.md`](docs/00-product/forensic-audit.md) |
+| Authoritative gap register (all 20 targets) | [`docs/00-product/legacy-audit-gap-register.md`](docs/00-product/legacy-audit-gap-register.md) |
+| Provisional assumptions — none approved | [`docs/00-product/assumptions.md`](docs/00-product/assumptions.md) |
+| Blockers and pending decisions | [`docs/00-product/open-decisions.md`](docs/00-product/open-decisions.md) |
 
 ## Provenance tags
 
@@ -51,7 +58,7 @@ Details, evidence, and the full gap register: [`docs/00-product/forensic-audit.m
 | Schema, RLS, tenant isolation, migrations | [`docs/02-database/`](docs/02-database/) |
 | Authentication and authorization | [`docs/03-auth/`](docs/03-auth/) |
 | Signal model, evidence, validation, dedup, scoring | [`docs/04-signals/`](docs/04-signals/) |
-| PayPal, subscriptions, entitlements, reconciliation | [`docs/05-billing/`](docs/05-billing/) |
+| PayPal, currency and cost policy, subscriptions, entitlements | [`docs/05-billing/`](docs/05-billing/) |
 | Cron, job lifecycle, idempotency | [`docs/06-jobs/`](docs/06-jobs/) |
 | Security model, threat model, secrets | [`docs/07-security/`](docs/07-security/) |
 | Admin control plane | [`docs/08-admin/`](docs/08-admin/) |

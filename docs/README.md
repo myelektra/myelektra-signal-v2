@@ -8,8 +8,10 @@ code, schema, or migration exists yet.
 
 | Document | Why |
 | --- | --- |
-| [00-product/forensic-audit.md](00-product/forensic-audit.md) | **The legacy repository is absent.** What that blocks, and how every requirement is tagged as a result. |
+| [00-product/legacy-audit-gap-register.md](00-product/legacy-audit-gap-register.md) | **The authoritative gap register.** The legacy source could not be resolved; all 20 mandated audit targets are statused here. |
+| [00-product/forensic-audit.md](00-product/forensic-audit.md) | The audit of record, and the evidence for why it could not be performed. |
 | [00-product/business-rules.md](00-product/business-rules.md) | The normative rule register, with provenance on every rule. |
+| [00-product/assumptions.md](00-product/assumptions.md) | Provisional positions taken without a fully authorizing source. **None is approved by default.** |
 | [00-product/open-decisions.md](00-product/open-decisions.md) | Everything unresolved, with blocking status. |
 | [01-architecture/legacy-carryover-decisions.md](01-architecture/legacy-carryover-decisions.md) | What is deliberately not carried over. |
 
@@ -27,8 +29,17 @@ Every requirement in this documentation set carries a tag. A requirement without
 | `X` | Blocked. Unknown. **Must not be invented.** | — |
 
 The reason this system exists: the brief forbids inventing pricing, quotas, or payment lifecycle
-behaviour. Without the legacy repository, a large part of that behaviour is genuinely unknown, and
-the only honest response is to mark it rather than fill it in.
+behaviour. The legacy repository could not be resolved in this workspace, so a large part of that
+behaviour is genuinely unknown, and the only honest response is to mark it rather than fill it in.
+
+The four registers are distinct and an item lives in exactly one of them:
+
+| Register | Holds | May be implemented? |
+| --- | --- | --- |
+| [business-rules](00-product/business-rules.md) | Rules grounded in the brief (`S1`) | Yes |
+| [assumptions](00-product/assumptions.md) | Provisional positions (`PROPOSED`) | **No — not until approved** |
+| [legacy-audit-gap-register](00-product/legacy-audit-gap-register.md) | Unknowns (`X`) | **No** |
+| [open-decisions](00-product/open-decisions.md) | The queue that resolves both | — |
 
 ## Document map
 
@@ -39,8 +50,10 @@ the only honest response is to mark it rather than fill it in.
 | [product-requirements.md](00-product/product-requirements.md) | Product definition, actors, catalog, content rules |
 | [business-rules.md](00-product/business-rules.md) | The normative rule register |
 | [glossary.md](00-product/glossary.md) | One definition per term |
-| [forensic-audit.md](00-product/forensic-audit.md) | Audit of record; gap register for all 20 targets |
-| [open-decisions.md](00-product/open-decisions.md) | Blockers and pending decisions |
+| [forensic-audit.md](00-product/forensic-audit.md) | The audit of record and the evidence behind its status |
+| [legacy-audit-gap-register.md](00-product/legacy-audit-gap-register.md) | Authoritative status of all 20 mandated audit targets |
+| [assumptions.md](00-product/assumptions.md) | Provisional positions, their invalidation triggers, and approval status |
+| [open-decisions.md](00-product/open-decisions.md) | Blockers, pending decisions, and the assumptions queue |
 
 ### 01-architecture
 
@@ -82,6 +95,7 @@ the only honest response is to mark it rather than fill it in.
 | Document | Contents |
 | --- | --- |
 | [paypal.md](05-billing/paypal.md) | Checkout, webhooks, replay protection, settlement |
+| [currency-and-cost-policy.md](05-billing/currency-and-cost-policy.md) | USD-only rules, and the cost-control mechanism with its numbers withheld |
 | [subscriptions.md](05-billing/subscriptions.md) | Lifecycle, and which behaviours remain undefined |
 | [entitlements.md](05-billing/entitlements.md) | Derivation, enforcement, and the undecided quotas |
 | [reconciliation.md](05-billing/reconciliation.md) | Converging with provider truth; escalate, don't auto-reverse |
