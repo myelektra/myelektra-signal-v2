@@ -26,7 +26,7 @@ What the audit was required to produce, and what this document must do in its ab
 | ID | Requirement | Status |
 | --- | --- | --- |
 | R-FA-1 | Read the legacy documentation and source code before any design work. | **Not met** — source absent |
-| R-FA-2 | Extract the 20 enumerated business-rule domains, whether or not they were documented. | **Partially met** — 3 answered, 8 partial, 9 blocked; see the gap register |
+| R-FA-2 | Extract the 20 enumerated business-rule domains, whether or not they were documented. | **Partially met** — 2 answered, 9 partial, 9 blocked; see the gap register |
 | R-FA-3 | Carry only business rules, never legacy implementation. | Met by construction — nothing was available to carry |
 | R-FA-4 | Record undocumented rules found in source into [business-rules](business-rules.md). | **Not met** — no source |
 | R-FA-5 | List conflicts between documents and resolve them by the stated precedence. | Partially met — precedence recorded; only one conflict is visible |
