@@ -17,9 +17,11 @@ Vercel  →  React / Vite / TypeScript SPA
 
 ## Status
 
-**Phase 0 — `READY_FOR_APPROVAL`.** The documentation baseline passed its final correctness pass.
-No application code, schema, or migration exists yet: the operating rule is that the baseline is
-written and reviewed before feature implementation starts.
+**Phase 0 — APPROVED.** **Phase 1A (foundation planning) — `READY_FOR_REVIEW`.**
+
+The documentation baseline is accepted. The Phase 1 plan is at
+[`docs/01-architecture/foundation-plan.md`](docs/01-architecture/foundation-plan.md). No application
+code, schema, migration, or integration exists yet.
 
 Start with [`docs/README.md`](docs/README.md).
 

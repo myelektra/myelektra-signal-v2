@@ -65,6 +65,7 @@ The four registers are distinct and an item lives in exactly one of them:
 | [frontend.md](01-architecture/frontend.md) | SPA responsibilities and limits |
 | [backend.md](01-architecture/backend.md) | Edge Functions, layering, the pure domain core |
 | [deployment.md](01-architecture/deployment.md) | Environments, release order, rollback |
+| [foundation-plan.md](01-architecture/foundation-plan.md) | **Phase 1A** — repository structure, boundary, env inventory, CI, enforcement, create/defer lists |
 | [legacy-exclusion-list.md](00-product/legacy-exclusion-list.md) | Exclusions and their automated detection (moved to `00-product/`) |
 
 ### 02-database
@@ -157,8 +158,11 @@ The four registers are distinct and an item lives in exactly one of them:
 
 ## Status
 
-**Phase 0 — `READY_FOR_APPROVAL`.** The documentation baseline passed its final correctness pass.
-No feature implementation, migration, or PayPal integration has begun.
+**Phase 0 — APPROVED.** **Phase 1A (foundation planning) — `READY_FOR_REVIEW`.**
+
+The documentation baseline is accepted. [foundation-plan.md](01-architecture/foundation-plan.md) is
+the Phase 1 plan. No application code, migration, policy, or integration has been created, and none
+will be until that plan is approved and [assumption A-12](00-product/assumptions.md) is signed off.
 
 See [production-checklist](10-testing/production-checklist.md#current-state) for the honest state,
 and [open-decisions](00-product/open-decisions.md) for what remains blocked.

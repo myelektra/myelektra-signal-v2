@@ -194,6 +194,9 @@ approved by default, and none may be implemented before approval.**
 | OD-PR-1 | Whether an annual billing interval is ever offered. Not in the brief; assumed absent. | [pricing.md](../05-billing/pricing.md) | `D` |
 | OD-PR-2 | Whether and how existing subscriptions are repriced on a catalog change. | [pricing.md](../05-billing/pricing.md) | `D` |
 | OD-PR-3 | Whether a free trial exists. Not in the brief; assumed absent (same subject as OD-UI-2). | [pricing.md](../05-billing/pricing.md) | `D` |
+| OD-FN-1 | Deno module resolution for `packages/adapters` from `supabase/functions` — Bun workspaces and Deno do not share resolution; needs an import map or a vendored copy. **Verify before committing to the layout.** | [foundation-plan.md](../01-architecture/foundation-plan.md) | `X` |
+| OD-FN-2 | ESLint flat config versus legacy config, and which import-boundary plugin. | [foundation-plan.md](../01-architecture/foundation-plan.md) | `D` |
+| OD-FN-3 | Whether preview deployments share one staging project or use per-PR branching (same subject as OD-DP-1, OD-MG-2). | [foundation-plan.md](../01-architecture/foundation-plan.md) | `D` |
 
 ## Appendix — document-local open decisions
 
