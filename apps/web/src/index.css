@@ -1,0 +1,159 @@
+/*
+ * Foundation shell styles.
+ *
+ * Accessibility is a requirement here, not a later pass: a visible skip link,
+ * a visible focus indicator, and body copy that meets WCAG AA contrast
+ * (production-checklist). No design system exists yet — that is deferred with
+ * the Phase 5 screens (OD-LC-2).
+ */
+
+:root {
+  --color-bg: #ffffff;
+  --color-fg: #14171a;
+  --color-muted: #4a5560;
+  --color-accent: #0b5fff;
+  --color-border: #c9ced4;
+  --measure: 68ch;
+  font-family:
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    "Helvetica Neue",
+    Arial,
+    sans-serif;
+  line-height: 1.6;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: #101317;
+    --color-fg: #eef1f4;
+    --color-muted: #b3bcc6;
+    --color-accent: #7ea8ff;
+    --color-border: #3a424c;
+    color-scheme: dark;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-fg);
+}
+
+.skip-link {
+  position: absolute;
+  left: -1000px;
+  top: 0;
+  padding: 0.75rem 1rem;
+  background: var(--color-accent);
+  color: #ffffff;
+  text-decoration: none;
+  z-index: 100;
+}
+
+.skip-link:focus {
+  left: 0;
+}
+
+:focus-visible {
+  outline: 3px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+.site-header,
+main,
+.site-footer {
+  max-width: var(--measure);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+.site-header {
+  padding-block: 1rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.site-name {
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+main {
+  padding-block: 1.5rem 3rem;
+}
+
+h1 {
+  font-size: 1.75rem;
+  line-height: 1.25;
+  margin: 0 0 0.5rem;
+}
+
+h2 {
+  font-size: 1.125rem;
+  margin: 2rem 0 0.5rem;
+}
+
+p {
+  max-width: var(--measure);
+}
+
+dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: minmax(10rem, max-content) 1fr;
+  gap: 0.375rem 1.25rem;
+}
+
+dt {
+  font-weight: 600;
+}
+
+dd {
+  margin: 0;
+  color: var(--color-muted);
+}
+
+code {
+  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+ul {
+  padding-left: 1.25rem;
+}
+
+.site-footer {
+  padding-block: 1.5rem 3rem;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+  font-size: 0.875rem;
+}
+
+/* Narrow viewports: stack the definition list instead of overflowing. */
+@media (max-width: 34rem) {
+  dl {
+    grid-template-columns: 1fr;
+  }
+
+  dd {
+    margin-bottom: 0.5rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

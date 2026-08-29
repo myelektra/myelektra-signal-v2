@@ -1,0 +1,24 @@
+{
+  "name": "@myelektra/web",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Layer 4 \u2014 the SPA. Imports @myelektra/contracts and nothing else from the workspace. Reaches the backend only through src/api.",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@myelektra/contracts": "workspace:*",
+    "@supabase/supabase-js": "^2.112.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "@vitejs/plugin-react": "^5.2.0",
+    "vite": "^7.1.0"
+  }
+}

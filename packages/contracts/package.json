@@ -1,0 +1,15 @@
+{
+  "name": "@myelektra/contracts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Shared request/response shapes between apps/web and supabase/functions. The only workspace package apps/web may import.",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "scripts": {
+    "test": "bun test"
+  }
+}
