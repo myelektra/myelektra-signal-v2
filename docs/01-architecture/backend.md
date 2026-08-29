@@ -98,7 +98,7 @@ One module per external provider, behind an interface. Rules:
 
 No Convex, Mayar, Midtrans, or Stripe package appears in the dependency tree, transitively included.
 No compatibility adapter exists for an absent system. Detection is automated
-([legacy-carryover R-LC-4](legacy-carryover-decisions.md#r-lc-4-detection-d)).
+([legacy-carryover R-LC-4](../00-product/legacy-exclusion-list.md#r-lc-4-detection-d)).
 
 ## Security considerations
 

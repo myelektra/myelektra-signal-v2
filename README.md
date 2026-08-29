@@ -82,4 +82,4 @@ bun run build
 Convex and `@convex-dev/auth` · Mayar · Midtrans · Stripe in any path · Convex cron · browser cron ·
 client-side secrets · public test or debug checkout endpoints · legacy migration compatibility
 layers. Rationale and automated detection:
-[`docs/01-architecture/legacy-carryover-decisions.md`](docs/01-architecture/legacy-carryover-decisions.md).
+[`docs/00-product/legacy-exclusion-list.md`](docs/00-product/legacy-exclusion-list.md).

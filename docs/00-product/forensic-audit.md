@@ -97,7 +97,7 @@ rules are nonetheless recorded so they bind as soon as more sources appear:
 One conflict *is* visible and is recorded here: the brief names `Stripe legacy path` among the
 prohibited items while also naming PayPal as the sole customer checkout provider. Resolution under
 rule 2 — PayPal only; Stripe is not implemented at all, in any path. See
-[legacy-carryover-decisions](../01-architecture/legacy-carryover-decisions.md).
+[legacy-exclusion-list](legacy-exclusion-list.md).
 
 ## Security considerations
 

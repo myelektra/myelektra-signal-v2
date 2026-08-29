@@ -1,10 +1,14 @@
-# Legacy Carryover Decisions
+# Legacy Exclusion List
 
 ## Purpose
 
-An explicit, itemized record of what from the legacy system is **not** carried into v2, so that the
-absence is a decision rather than an oversight, and so that a reviewer can reject a pull request that
-reintroduces one.
+The single authoritative list of everything excluded from v2 — legacy platforms, legacy payment
+providers, and legacy currency handling — so that each absence is a decision rather than an
+oversight, and a reviewer can reject a pull request that reintroduces one.
+
+Every entry is marked **LEGACY — EXCLUDED**. Nothing on this list may appear in the schema, the code,
+the configuration, or the dependency tree. The only permitted occurrence of these names is in this
+document and in other documents that state the exclusion.
 
 ## Scope
 
@@ -79,6 +83,40 @@ Prohibitions that rely on reviewer memory will fail. Automated detection is requ
 | Bundle scan | Service-role key or any secret pattern in build output |
 | Route inventory | Any route matching a test/debug checkout pattern |
 | Migration review | Any migration referencing a legacy table or column name |
+| Currency scan | Any `IDR`, `amount_idr`, `fx_rate`, `exchange_rate`, `USD_TO_IDR`, or `rupiah` occurrence **outside exclusion documentation**, or defined as a schema field |
+| Schema scan | Any monetary column without `check (currency = 'USD')`, or using a float type |
+
+### R-LC-5 Excluded currency handling `S1`
+
+Legacy currency constructs are excluded along with the legacy platforms. USD is the only currency;
+see [currency-and-cost-policy](currency-and-cost-policy.md).
+
+| Identifier | Status | Note |
+| --- | --- | --- |
+| `IDR` | **LEGACY — EXCLUDED** | No rupiah anywhere: no column, constant, or display path |
+| `amount_idr` | **LEGACY — EXCLUDED** | No dual-currency amount column |
+| `fx_rate` | **LEGACY — EXCLUDED** | No rate column |
+| `exchange_rate` | **LEGACY — EXCLUDED** | No rate column |
+| `USD_TO_IDR` | **LEGACY — EXCLUDED** | No rate constant |
+| Currency conversion | **LEGACY — EXCLUDED** | No conversion function, service, module, or helper |
+| Country-based conversion | **LEGACY — EXCLUDED** | Currency is never derived from country, locale, IP, or browser language |
+| FX table / rate cache | **LEGACY — EXCLUDED** | No storage of rates, historical or current |
+
+**Verified state.** These identifiers appear in this repository **only as entries in this exclusion
+list and in [currency-and-cost-policy](currency-and-cost-policy.md)** — that is, only as statements
+that they are excluded. They appear in **no schema field, no constant, no code identifier, and no
+configuration value**, and the repository currently contains no non-markdown files at all.
+
+Nothing on this list required deletion, because nothing on it was ever introduced. Whether the legacy
+system used IDR is unknown ([gap register](legacy-audit-gap-register.md)) and does not matter: v2
+carries no currency handling forward, so there is nothing to migrate and nothing to convert.
+
+The gate (R-LC-4) enforces "no occurrence outside exclusion documentation" and "never defined as a
+field" — not "zero hits", which would fail against this document itself.
+
+This is recorded explicitly rather than left unsaid: whether or not the legacy system handled IDR is
+unknown ([gap register](legacy-audit-gap-register.md)), and **it does not matter** — v2 does not
+carry currency handling forward in any form, so there is nothing to migrate and nothing to convert.
 
 ## Security considerations
 
@@ -93,7 +131,11 @@ Prohibitions that rely on reviewer memory will fail. Automated detection is requ
 ## Acceptance criteria
 
 - [ ] `bun install` resolves with no prohibited dependency in the tree, including transitive.
-- [ ] A source scan for `convex|mayar|midtrans|stripe` returns only documentation of the prohibition.
+- [ ] A source scan for `convex|mayar|midtrans|stripe` returns only documentation of the exclusion.
+- [ ] `IDR`, `amount_idr`, `fx_rate`, `exchange_rate`, `USD_TO_IDR`, and `rupiah` occur only inside
+      exclusion documentation, and are never defined as a field, constant, or identifier.
+- [ ] No monetary column lacks `check (currency = 'USD')`.
+- [ ] The detection checks in R-LC-4 and R-LC-5 run in CI and fail the build.
 - [ ] No route, handler, or function name matches a test/debug checkout pattern in any environment.
 - [ ] No migration file references a legacy table or column.
 - [ ] No credential in the v2 environment matches a legacy credential.

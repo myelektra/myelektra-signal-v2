@@ -88,7 +88,7 @@ scanning misses.
 Rules: rotation must not require a code change (Vault reads at call time make this true); a leaked
 staging secret is rotated even though it is not production, because reuse across environments is what
 turns a small leak into a large one; and **no legacy secret is reused** — every v2 credential is
-newly issued ([legacy-carryover R-LC-3](../01-architecture/legacy-carryover-decisions.md#r-lc-3-legacy-artefacts-deliberately-left-behind-d)).
+newly issued ([legacy-carryover R-LC-3](../00-product/legacy-exclusion-list.md#r-lc-3-legacy-artefacts-deliberately-left-behind-d)).
 
 ### R-SE-6 Leak response `D`
 
